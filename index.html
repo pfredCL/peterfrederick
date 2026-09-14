@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Peter Frederick</title>
+<meta name="description" content="Personal site of Peter Frederick.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500&family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --river:#0E1917;
+    --mist:#DDE2DC;
+    --sage:#7E9A87;
+    --brass:#B98A3C;
+    --measure:34rem;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--river);
+    color:var(--mist);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;
+    font-size:clamp(1rem,0.95rem + 0.2vw,1.0625rem);
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:var(--measure);
+    margin:0 auto;
+    padding:clamp(3.5rem,12vh,8rem) 1.5rem 4rem;
+  }
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:0.75rem;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--sage);
+    margin:0 0 1.25rem;
+  }
+  h1{
+    font-family:Fraunces,Georgia,serif;
+    font-weight:300;
+    font-size:clamp(2.75rem,2rem + 3.4vw,4.25rem);
+    line-height:1.02;
+    letter-spacing:-0.02em;
+    margin:0 0 2rem;
+  }
+  /* Signature: a waterline, with the irregular marks an oar leaves behind. */
+  .waterline{margin:0 0 2.5rem;display:block;width:100%;height:14px;overflow:visible}
+  .waterline line{stroke:var(--sage);stroke-width:1}
+  .waterline .surface{stroke-opacity:0.45}
+  .waterline .puddle{stroke:var(--brass);stroke-opacity:0.9}
+  p{margin:0 0 1.35rem;max-width:32rem}
+  .lede{font-size:1.15em;color:var(--mist)}
+  .muted{color:var(--sage)}
+  a{color:var(--mist);text-decoration:none;border-bottom:1px solid var(--brass);padding-bottom:1px}
+  a:hover{color:var(--brass)}
+  a:focus-visible{outline:2px solid var(--brass);outline-offset:3px;border-radius:2px}
+  .foot{
+    margin-top:4rem;
+    padding-top:1.5rem;
+    border-top:1px solid rgba(126,154,135,0.22);
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:0.75rem;
+    letter-spacing:0.06em;
+    color:var(--sage);
+  }
+  .foot a{border-bottom-color:rgba(185,138,60,0.55)}
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="eyebrow">Cambridge, Massachusetts</p>
+    <h1>Peter&nbsp;Frederick</h1>
+
+    <svg class="waterline" viewBox="0 0 600 14" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <line class="surface" x1="0" y1="7" x2="600" y2="7"/>
+      <line class="puddle" x1="38"  y1="1" x2="38"  y2="13"/>
+      <line class="puddle" x1="97"  y1="3" x2="97"  y2="11"/>
+      <line class="puddle" x1="163" y1="1" x2="163" y2="13"/>
+      <line class="puddle" x1="221" y1="4" x2="221" y2="10"/>
+      <line class="puddle" x1="290" y1="1" x2="290" y2="13"/>
+      <line class="puddle" x1="344" y1="3" x2="344" y2="11"/>
+      <line class="puddle" x1="416" y1="1" x2="416" y2="13"/>
+      <line class="puddle" x1="470" y1="4" x2="470" y2="10"/>
+      <line class="puddle" x1="541" y1="2" x2="541" y2="12"/>
+    </svg>
+
+    <p class="lede">I work on data, I row, and I build things.</p>
+
+    <p class="muted">This domain hosts personal projects.</p>
+
+    <p class="foot">
+      <a href="/privacy.html">Privacy</a> &nbsp;·&nbsp;
+      <a href="mailto:peter.a.frederick@gmail.com">peter.a.frederick@gmail.com</a>
+    </p>
+  </main>
+</body>
+</html>
