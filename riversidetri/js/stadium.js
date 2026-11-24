@@ -12,8 +12,11 @@
   let fixing = null;     // { tapId, confirm } for a named time opened in the log
   let moving = null;     // { person, fromTap, fromTime, toTap, toTime }
   let lastPress = -Infinity; // performance.now() of the last accepted press: a steady clock, unlike store.correctedNow()
-  let pointerDown = false;   // a finger is down inside main: lists must not be replaced under it
+  const STUCK_MS = 1500;     // a pointer "down" for longer than this is treated as lost
+  const pointers = new Set(); // pointerIds down inside main: lists must not be replaced under them
+  let lastDownAt = -Infinity;
   let renderPending = false;
+  let flushTimer = null;
 
   const store = UI.boot(render);
   if (!store) return;
@@ -34,15 +37,32 @@
   });
   $("search").addEventListener("input", (e) => { query = e.target.value; moving = null; render(); });
   document.querySelector("main").addEventListener("click", onClick);
-  document.querySelector("main").addEventListener("pointerdown", () => { pointerDown = true; });
-  const released = () => {
-    if (!pointerDown) return;
-    pointerDown = false;
-    // Wait a beat so the click that follows the release still lands on the button that was pressed.
-    if (renderPending) setTimeout(() => { if (!pointerDown) render(); }, 30);
+  function fingerDown() { return pointers.size > 0 && performance.now() - lastDownAt < STUCK_MS; }
+  document.querySelector("main").addEventListener("pointerdown", (e) => { pointers.add(e.pointerId); lastDownAt = performance.now(); });
+  // Run the deferred render once: after the page's click handler has run, or after 300 ms, whichever is first.
+  function flush() {
+    window.removeEventListener("click", onFlushClick);
+    clearTimeout(flushTimer);
+    flushTimer = null;
+    if (renderPending && !fingerDown()) render();
+  }
+  const onFlushClick = () => setTimeout(flush, 0);
+  const afterRelease = () => {
+    if (!renderPending) return;
+    window.addEventListener("click", onFlushClick, { once: true });
+    clearTimeout(flushTimer);
+    flushTimer = setTimeout(flush, 300);
   };
+  const released = (e) => {
+    if (!pointers.delete(e.pointerId) || pointers.size) return;
+    afterRelease();
+  };
+  const clearPointers = () => { if (pointers.size) { pointers.clear(); afterRelease(); } };
   window.addEventListener("pointerup", released);
   window.addEventListener("pointercancel", released);
+  window.addEventListener("contextmenu", clearPointers);
+  window.addEventListener("blur", clearPointers);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) clearPointers(); });
 
   function currentTarget(v) {
     const unnamed = Model.unnamedTaps(v, station);
@@ -65,9 +85,15 @@
   }
 
   function render() {
-    if (pointerDown) { renderPending = true; return; }
-    renderPending = false;
     UI.renderStatus(store);
+    if (fingerDown()) {
+      renderPending = true;
+      // A pointer that never comes up must not freeze the lists: look again once it counts as stale.
+      if (!flushTimer) flushTimer = setTimeout(flush, Math.max(0, STUCK_MS - (performance.now() - lastDownAt)) + 20);
+      return;
+    }
+    pointers.clear();
+    renderPending = false;
     const v = store.view();
     if (!v) { UI.setHtml($("pool"), UI.loading(store)); return; }
     const key = focusKey();
@@ -212,6 +238,12 @@
     } else if ("moveYes" in d && moving) {
       const m = moving;
       moving = null;
+      const owner = v.byId[m.person.id];
+      if (!owner || owner[AT + "TapId"] !== m.fromTap) {
+        UI.announce("That time has changed. Search for the person again.");
+        render();
+        return;
+      }
       if (!Model.unnamedTaps(v, station).some((t) => t.id === m.toTap)) {
         UI.announce("That time already has a name. Pick the time again.");
         render();

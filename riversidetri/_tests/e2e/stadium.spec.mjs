@@ -103,3 +103,13 @@ test("with no signal, taps wait on the phone, survive a reload and send when it'
   await expect(signedIn.locator("#sync")).toHaveText("All saved", { timeout: 15_000 });
   expect(api.events.filter((e) => e.type === "tap")).toHaveLength(1);
 });
+
+test("a pointer that never comes up can't freeze the lists", async ({ signedIn, api }) => {
+  await signedIn.goto("/entrance.html");
+  const name = signedIn.locator("#pool [data-name]").first();
+  await name.dispatchEvent("pointerdown", { bubbles: true, pointerId: 7 });
+  const when = Date.now() - 1000;
+  api.events.push(event("tap", { id: "stuck-1", station: "entrance", time: when }));
+  await expect(signedIn.locator("#queue")).toContainText("Tap who it was", { timeout: 3000 });
+  await expect(signedIn.locator("#queue .stamp-item")).toHaveCount(1);
+});
