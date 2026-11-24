@@ -22,6 +22,9 @@ var Model = (function () {
   const pad2 = (n) => (n < 10 ? "0" : "") + n;
   const has = (v) => v !== null && v !== undefined;
   const text = (v) => (has(v) ? String(v) : "");
+  // A number, or null when the value is missing or isn't one (so "abc" never turns into NaN).
+  const num = (v) => { if (v === null || v === undefined || v === "") return null; const n = Number(v); return isFinite(n) ? n : null; };
+  const joinAnd = (list) => list.length < 2 ? list.join("") : list.slice(0, -1).join(", ") + " and " + list[list.length - 1];
   const byName = (a, b) => a.name.localeCompare(b.name);
 
   function issue(kind, message, extra) {
@@ -153,14 +156,14 @@ var Model = (function () {
   function normaliseRoster(rows) {
     const competitors = [];
     const issues = [];
-    const rowsByNumber = {};
+    const rowsByNumber = Object.create(null);
     (rows || []).forEach((r) => {
       const name = text(r.name).trim();
       const numberText = text(r.number).trim();
       const flightText = text(r.flight).trim();
       if (!name && !numberText && !flightText) return;
       if (!name) {
-        issues.push(issue("roster", "Row " + r.row + " of Competitors has no name, so it's left out."));
+        issues.push(issue("roster", "Row " + r.row + " of Competitors has no name, so it's left out. Add a name or clear the row."));
         return;
       }
       let number = null;
@@ -171,7 +174,7 @@ var Model = (function () {
       const flight = parseFlight(flightText);
       if (!flight) {
         issues.push(issue("roster", "Row " + r.row + " of Competitors has " +
-          (flightText ? '"' + flightText + "\" as its flight, which isn't a time like 8:10." : "no flight.")));
+          (flightText ? '"' + flightText + "\" as its flight. Type it as a time, like 8:10." : "no flight. Type one, like 8:10.")));
       }
       if (number !== null) (rowsByNumber[number] = rowsByNumber[number] || []).push(r.row);
       competitors.push({
@@ -181,7 +184,7 @@ var Model = (function () {
     });
     Object.keys(rowsByNumber).forEach((n) => {
       if (rowsByNumber[n].length > 1) {
-        issues.push(issue("roster", "Number " + n + " is used more than once in Competitors (rows " + rowsByNumber[n].join(" and ") + ")."));
+        issues.push(issue("roster", "Number " + n + " is used more than once in Competitors (rows " + joinAnd(rowsByNumber[n]) + "). Give each person their own number."));
       }
     });
     return { competitors: competitors, issues: issues };
@@ -199,9 +202,9 @@ var Model = (function () {
   // Apply voids and replacements: the latest start per flight, erg per competitor and name per tap.
   function resolve(events) {
     const list = (events || []).slice().sort(compareEvents);
-    const voided = {};
+    const voided = Object.create(null);
     list.forEach((e) => { if (e.type === "void" && e.target) voided[e.target] = true; });
-    const out = { starts: {}, startIds: {}, ergs: {}, taps: [], names: {} };
+    const out = { starts: Object.create(null), startIds: Object.create(null), ergs: Object.create(null), taps: [], names: Object.create(null) };
     list.forEach((e) => {
       if (voided[e.id] || e.type === "void") return;
       if (e.type === "start") {
@@ -221,7 +224,7 @@ var Model = (function () {
   // Competitors (from normaliseRoster) + events -> everything the screens show.
   function compute(competitors, events, now) {
     const r = resolve(events);
-    const byId = {};
+    const byId = Object.create(null);
     const issues = [];
     const people = competitors.map((c) => {
       const p = {
@@ -233,7 +236,7 @@ var Model = (function () {
       return p;
     });
 
-    const flightMap = {};
+    const flightMap = Object.create(null);
     competitors.forEach((c) => {
       if (!c.flight) return;
       if (!flightMap[c.flight]) flightMap[c.flight] = { label: c.flight, minutes: c.flightMinutes, count: 0, start: null, startEventId: null, startEventIds: [] };
@@ -242,26 +245,32 @@ var Model = (function () {
     const flights = Object.keys(flightMap).map((k) => flightMap[k]).sort((a, b) => a.minutes - b.minutes);
     flights.forEach((f) => {
       const s = r.starts[f.label];
-      if (s) { f.start = Number(s.time); f.startEventId = s.id; f.startEventIds = r.startIds[f.label]; }
+      if (s && has(num(s.time))) { f.start = num(s.time); f.startEventId = s.id; f.startEventIds = r.startIds[f.label]; }
     });
 
     Object.keys(r.ergs).forEach((cid) => {
       const e = r.ergs[cid];
-      if (byId[cid]) { byId[cid].erg = Number(e.value); byId[cid].ergCreated = e.created; }
-      else issues.push(issue("orphan", "An erg time of " + formatTenths(Number(e.value)) + " belongs to someone no longer in Competitors."));
+      const erg = num(e.value);
+      if (byId[cid]) { byId[cid].erg = erg; byId[cid].ergCreated = erg === null ? null : e.created; }
+      else if (erg !== null) issues.push(issue("orphan", "An erg time of " + formatTenths(erg) + " belongs to someone no longer in Competitors, so it's left out. Add them back to Competitors if that was a mistake."));
     });
 
-    const taps = { entrance: [], exit: [] };
+    const taps = Object.create(null);
+    STATIONS.forEach((st) => { taps[st] = []; });
     r.taps.forEach((t) => {
-      if (!taps[t.station]) return;
+      if (!taps[t.station] || num(t.time) === null) return;
       const n = r.names[t.id];
       const cid = n && n.competitor && byId[n.competitor] ? n.competitor : "";
-      taps[t.station].push({ id: t.id, station: t.station, time: Number(t.time), competitor: cid });
+      if (n && n.competitor && !cid) {
+        issues.push(issue("orphan", "A " + STATION_NAMES[t.station].toLowerCase() + " time, " + formatClock(num(t.time), true) +
+          ", was named for someone no longer in Competitors. Name it again at the " + STATION_NAMES[t.station].toLowerCase() + ".", { station: t.station }));
+      }
+      taps[t.station].push({ id: t.id, station: t.station, time: num(t.time), competitor: cid });
     });
 
     STATIONS.forEach((st) => {
       const key = st === "entrance" ? "arrival" : "finish";
-      const seen = {};
+      const seen = Object.create(null);
       taps[st].forEach((tap) => {
         if (!tap.competitor) return;
         if (seen[tap.competitor]) { seen[tap.competitor].push(tap); return; }
@@ -273,16 +282,17 @@ var Model = (function () {
         const list = seen[cid];
         if (list.length < 2) return;
         issues.push(issue("duplicate", byId[cid].name + " is named on " + list.length + " " + STATION_NAMES[st].toLowerCase() +
-          " times (" + list.map((t) => formatClock(t.time, true)).join(", ") + "). The earliest counts until you fix it.", { competitor: cid, station: st }));
+          " times (" + list.map((t) => formatClock(t.time, true)).join(", ") + "). The earliest counts until you change the name on the wrong one.", { competitor: cid, station: st }));
       });
       const unnamed = taps[st].filter((t) => !t.competitor && now - t.time > UNNAMED_AFTER_MS);
       if (unnamed.length) {
         issues.push(issue("unnamed", STATION_NAMES[st] + " has " + (unnamed.length === 1 ? "a time" : unnamed.length + " times") +
-          " without a name, the oldest from " + formatClock(unnamed[0].time, true) + ".", { station: st }));
+          " without a name, the oldest from " + formatClock(unnamed[0].time, true) + ". Ask the " + STATION_NAMES[st].toLowerCase() +
+          " volunteer to tap who it was.", { station: st }));
       }
     });
 
-    const startOf = {};
+    const startOf = Object.create(null);
     flights.forEach((f) => { startOf[f.label] = f.start; });
     people.forEach((p) => {
       p.start = has(startOf[p.flight]) ? startOf[p.flight] : null;
@@ -291,19 +301,24 @@ var Model = (function () {
       const F = has(p.start) && has(p.finish) ? Math.round((p.finish - p.start) / 100) : null;
       if (has(A) && has(p.erg)) p.run = A - p.erg;
       if (has(p.arrival) && has(p.finish)) p.stadium = has(A) && has(F) ? F - A : Math.round((p.finish - p.arrival) / 100);
-      if (has(p.run) && has(p.stadium) && has(F)) p.total = F;
+      if (has(p.run) && p.run > 0 && has(p.stadium) && p.stadium > 0 && has(F)) p.total = F;
       p.status = has(p.finish) ? "Finished" : has(p.arrival) ? "In the stadium" : !has(p.start) ? "Not started" : has(p.erg) ? "On the run" : "On the erg";
 
       const who = { competitor: p.id };
-      if (has(p.arrival) && !has(p.erg)) issues.push(issue("ergMissing", p.name + " has arrived at the stadium but has no erg time.", who));
-      if (has(p.finish) && !has(p.arrival)) issues.push(issue("arrivalMissing", p.name + " has finished but has no stadium arrival.", who));
+      if (p.flight && !has(p.start) && (has(p.arrival) || has(p.finish))) {
+        issues.push(issue("noStart", p.name + " has a stadium time but the " + p.flight + " flight hasn't been started. Start it, or set its start time, under Flights.", who));
+      }
+      if (has(p.arrival) && !has(p.erg)) issues.push(issue("ergMissing", p.name + " has arrived at the stadium but has no erg time. Add it on the erg screen or in Everyone below.", who));
+      if (has(p.finish) && !has(p.arrival)) issues.push(issue("arrivalMissing", p.name + " has finished but has no stadium arrival. Name their arrival at the stadium entrance.", who));
       if (has(p.run) && p.run <= 0) {
-        issues.push(issue("run", p.name + "'s arrival is before the end of their erg. Check the erg time and the arrival.", who));
+        issues.push(issue("run", p.name + "'s arrival is before the end of their erg. Check the erg time, the arrival and the flight's start time.", who));
       } else if (has(p.run) && (p.run < RUN_MIN || p.run > RUN_MAX)) {
         issues.push(issue("run", p.name + "'s run of " + formatTenths(p.run) + " is " + (p.run < RUN_MIN ? "under 20 minutes" : "over 2 hours") +
           ". Check the erg time and the arrival.", who));
       }
-      if (has(p.stadium) && (p.stadium < STADIUM_MIN || p.stadium > STADIUM_MAX)) {
+      if (has(p.stadium) && p.stadium <= 0) {
+        issues.push(issue("stadium", p.name + "'s finish is before their arrival. The names on those two stadium times may be swapped, so check them.", who));
+      } else if (has(p.stadium) && (p.stadium < STADIUM_MIN || p.stadium > STADIUM_MAX)) {
         issues.push(issue("stadium", p.name + "'s stadium time of " + formatTenths(p.stadium) + " is " +
           (p.stadium < STADIUM_MIN ? "under 10 minutes" : "over 90 minutes") + ". Check the arrival and the finish.", who));
       }

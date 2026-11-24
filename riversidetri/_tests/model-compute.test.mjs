@@ -69,10 +69,10 @@ test("issues: duplicate names, an old unnamed time, an odd run, a missing erg ti
     ev("i4", "tap", t0 + 8, { station: "entrance", time: t0 + 2_700_000 }),
   ], t0 + 3_000_000);
   assert.deepEqual(v.issues.map((i) => i.text), [
-    "Dana Price is named on 2 stadium entrance times (8:54:37.0, 8:56:17.0). The earliest counts until you fix it.",
-    "Stadium entrance has a time without a name, the oldest from 8:59:37.0.",
+    "Dana Price is named on 2 stadium entrance times (8:54:37.0, 8:56:17.0). The earliest counts until you change the name on the wrong one.",
+    "Stadium entrance has a time without a name, the oldest from 8:59:37.0. Ask the stadium entrance volunteer to tap who it was.",
     "Dana Price's run of 1:44.0 is under 20 minutes. Check the erg time and the arrival.",
-    "Jamie Lowe has arrived at the stadium but has no erg time.",
+    "Jamie Lowe has arrived at the stadium but has no erg time. Add it on the erg screen or in Everyone below.",
   ]);
   assert.equal(v.people[0].arrivalTapId, "i1");
 });
@@ -83,4 +83,77 @@ test("a time named for someone deleted from Competitors goes back to needing a n
     ev("n", "name", 11, { target: "i", competitor: "gone" }),
   ], 2000);
   assert.equal(v.taps.entrance[0].competitor, "");
+});
+
+const dayT0 = () => new Date(2026, 11, 5, 8, 14, 37).getTime();
+const named = (id, station, time, who, c) => [
+  ev(id, "tap", c, { station, time }), ev("n" + id, "name", c + 1, { target: id, competitor: who })];
+
+test("a finish before the arrival is flagged and not ranked", () => {
+  const t0 = dayT0();
+  const v = Model.buildView([row("c1", "Dana Price", "8:10")], [
+    ev("s", "start", t0, { value: "8:10", time: t0 }),
+    ev("e", "erg", t0 + 1, { competitor: "c1", value: "22960" }),
+  ].concat(named("i", "entrance", t0 + 3_600_000, "c1", 10), named("o", "exit", t0 + 3_600_000 - 960_000, "c1", 20)), t0 + 4e6);
+  assert.deepEqual(v.issues.map((i) => i.text), ["Dana Price's finish is before their arrival. The names on those two stadium times may be swapped, so check them."]);
+  assert.equal(v.issues[0].kind, "stadium");
+  assert.equal(v.people[0].total, null);
+});
+
+test("an arrival before the end of the erg leaves no total", () => {
+  const t0 = dayT0();
+  const v = Model.buildView([row("c1", "Dana Price", "8:10")], [
+    ev("s", "start", t0, { value: "8:10", time: t0 }),
+    ev("e", "erg", t0 + 1, { competitor: "c1", value: "22960" }),
+  ].concat(named("i", "entrance", t0 + 2_000_000, "c1", 10), named("o", "exit", t0 + 4_000_000, "c1", 20)), t0 + 5e6);
+  assert.equal(v.people[0].total, null);
+  assert.deepEqual(v.issues.map((i) => i.text), ["Dana Price's arrival is before the end of their erg. Check the erg time, the arrival and the flight's start time."]);
+});
+
+test("an erg value that isn't a number counts as no erg", () => {
+  const t0 = dayT0();
+  const v = Model.buildView([row("c1", "Dana Price", "8:10")], [
+    ev("s", "start", t0, { value: "8:10", time: t0 }),
+    ev("e", "erg", t0 + 1, { competitor: "c1", value: "abc" }),
+  ].concat(named("i", "entrance", t0 + 3_000_000, "c1", 10)), t0 + 4e6);
+  const p = v.people[0];
+  assert.equal(p.erg, null);
+  assert.equal(p.run, null);
+  assert.deepEqual(v.issues.map((i) => i.kind), ["ergMissing"]);
+});
+
+test("a tap whose time isn't a number is skipped", () => {
+  const v = Model.buildView([row("c1", "Dana Price", "8:10")], [ev("i", "tap", 10, { station: "entrance", time: "soon" })], 1e9);
+  assert.deepEqual(v.taps.entrance, []);
+  assert.deepEqual(v.issues, []);
+});
+
+test("IDs like constructor and __proto__ don't break the calculation", () => {
+  const v = Model.buildView([row("c1", "Dana Price", "8:10")], [
+    ev("i", "tap", 10, { station: "entrance", time: 1000 }),
+    ev("n", "name", 11, { target: "i", competitor: "constructor" }),
+    ev("e", "erg", 12, { competitor: "__proto__", value: "22960" }),
+  ], 2000);
+  assert.equal(v.taps.entrance[0].competitor, "");
+});
+
+test("a time named for someone deleted is reported as an orphan", () => {
+  const t0 = dayT0();
+  const v = Model.buildView([row("c1", "Dana Price", "8:10")], named("i", "entrance", t0 + 2_280_000, "gone", 10), t0 + 2_300_000);
+  assert.deepEqual(v.issues.map((i) => i.text), ["A stadium entrance time, 8:52:37.0, was named for someone no longer in Competitors. Name it again at the stadium entrance."]);
+  assert.equal(v.issues[0].kind, "orphan");
+  assert.equal(v.issues[0].station, "entrance");
+});
+
+test("an erg for a deleted competitor says how to fix it", () => {
+  const v = Model.buildView([], [ev("e", "erg", 1, { competitor: "gone", value: "22960" })], 2000);
+  assert.deepEqual(v.issues.map((i) => i.text), ["An erg time of 38:16.0 belongs to someone no longer in Competitors, so it's left out. Add them back to Competitors if that was a mistake."]);
+});
+
+test("a stadium time on a flight with no start is flagged", () => {
+  const t0 = dayT0();
+  const v = Model.buildView([row("c1", "Dana Price", "8:10")], named("i", "entrance", t0 + 2_400_000, "c1", 10), t0 + 2_500_000);
+  const n = v.issues.filter((i) => i.kind === "noStart");
+  assert.deepEqual(n.map((i) => i.text), ["Dana Price has a stadium time but the 8:10 flight hasn't been started. Start it, or set its start time, under Flights."]);
+  assert.equal(n[0].competitor, "c1");
 });
