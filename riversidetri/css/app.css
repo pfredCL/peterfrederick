@@ -186,8 +186,9 @@ button.row:disabled .bib { color: var(--ink-faint); }
 .has-error .time-entry { border-color: var(--danger); box-shadow: inset 0 0 0 var(--rule-width) var(--danger); }
 
 /* ---------- Station choice (start page) ---------- */
-.stations { margin: 0; padding: 0; border: 0; min-width: 0; }
-.stations legend { padding: 0; }
+/* A legend ignores its own top margin, so the fieldset carries the gap below the top bar. */
+.stations { margin: var(--space-5) 0 0; padding: 0; border: 0; min-width: 0; }
+.stations legend { padding: 0; margin-top: 0; }
 .choices { margin-top: var(--space-3); border-top: var(--rule-width) solid var(--rule); }
 .choice {
   position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--space-3);
@@ -258,6 +259,7 @@ table.data { width: 100%; border-collapse: collapse; white-space: nowrap; }
 .data td.rank { color: var(--ink-muted); width: var(--space-7); }
 .data td.strong { font-weight: var(--weight-strong); }
 .data .pending { color: var(--ink-muted); }
+.data abbr[title] { text-decoration: none; }
 /* Results tables share fixed column widths so the two tables line up. */
 .data.fixed { table-layout: fixed; }
 .data.fixed th:first-child { width: var(--space-7); }
