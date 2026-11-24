@@ -24,7 +24,7 @@
     if (!v) { UI.setHtml($("overall"), UI.loading(store)); return; }
     const r = Model.rank(v.people);
     const n = r.overall.length + r.nontrad.length;
-    $("race-meta").textContent = CONFIG.race.date + ", " + n + (n === 1 ? " finisher" : " finishers");
+    $("race-meta").textContent = CONFIG.race.date + (n ? ", " + n + (n === 1 ? " finisher" : " finishers") : "");
     UI.setHtml($("overall"), r.overall.length ? table(r.overall, "", "Overall results") : v.people.length ? '<p class="empty">No one has finished yet.</p>' : UI.emptyRoster());
     $("nontrad-block").hidden = !r.nontrad.length;
     UI.setHtml($("nontrad"), r.nontrad.length ? table(r.nontrad, "*", "Non-traditional results") : "");

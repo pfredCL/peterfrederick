@@ -61,3 +61,28 @@ test("?next=constructor is ignored like no next", async ({ app }) => {
   await app.goto("/index.html?next=constructor");
   await expect(app.getByText("Which station are you at?")).toBeVisible();
 });
+
+test("the title names the race year, like the organiser and results pages", async ({ app }) => {
+  await app.goto("/index.html");
+  await expect(app.getByRole("heading", { level: 1 })).toHaveText("RBC Tri-Wrathlon 2026");
+});
+
+test("a keyboard press doesn't move a button; a pointer press shows it is pressed", async ({ app }) => {
+  await app.goto("/index.html");
+  const open = app.getByRole("button", { name: "Open station" });
+  await open.focus();
+  await app.keyboard.down("Space");
+  await app.waitForTimeout(150);
+  expect(await open.evaluate((el) => getComputedStyle(el).transform)).toBe("none");
+  await app.keyboard.up("Space");
+  // A tapped station choice darkens while pressed, instead of the browser's own tap flash.
+  const choice = app.locator(".choice").first();
+  const box = await choice.boundingBox();
+  const rest = await choice.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await app.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await app.mouse.down();
+  const pressed = await choice.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await app.mouse.up();
+  expect(pressed).not.toBe(rest);
+  expect(await app.evaluate(() => getComputedStyle(document.documentElement).webkitTapHighlightColor)).toBe("rgba(0, 0, 0, 0)");
+});

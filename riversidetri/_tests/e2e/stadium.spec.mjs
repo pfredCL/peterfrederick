@@ -114,3 +114,16 @@ test("a pointer that never comes up can't freeze the lists", async ({ signedIn, 
   await expect(signedIn.locator("#queue")).toContainText("Tap who it was", { timeout: 3000 });
   await expect(signedIn.locator("#queue .stamp-item")).toHaveCount(1);
 });
+
+test("a name row darkens while pressed", async ({ signedIn }) => {
+  await signedIn.goto("/entrance.html");
+  await signedIn.getByRole("button", { name: "Record arrival" }).click();
+  const row = signedIn.getByRole("button", { name: /Sam Carter/ });
+  const rest = await row.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const box = await row.boundingBox();
+  await signedIn.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await signedIn.mouse.down();
+  const pressed = await row.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(pressed).not.toBe(rest);
+  await signedIn.mouse.up();
+});

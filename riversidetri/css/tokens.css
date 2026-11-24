@@ -1,5 +1,5 @@
 /* Riverside Tri-Wrathlon timer: design tokens.
-   Draft for approval. Components use these and nothing else: no literal colours or sizes.
+   Components use these and nothing else: no literal colours or sizes.
    Light is the default; dark follows the phone's setting, or [data-theme] forces one. */
 
 :root {
@@ -16,14 +16,12 @@
   --weight-strong: 600; /* the heaviest weight in the app */
 
   /* Type scale: size / line height. 16 is the phone body size (it also stops iOS zooming
-     into inputs). 12 is the floor. */
-  --text-12: 0.75rem;   --leading-12: 1rem;
+     into inputs). Nothing goes under 12; the smallest in use is 14. */
   --text-14: 0.875rem;  --leading-14: 1.25rem;
   --text-16: 1rem;      --leading-16: 1.5rem;
   --text-20: 1.25rem;   --leading-20: 1.75rem;
   --text-24: 1.5rem;    --leading-24: 2rem;
   --text-32: 2rem;      --leading-32: 2.5rem;
-  --text-48: 3rem;      --leading-48: 3.25rem;
 
   /* Spacing: 4px steps. */
   --space-1: 0.25rem;  /*  4 */
@@ -37,7 +35,7 @@
 
   /* Radii: two only. Nothing is pill-shaped. */
   --radius-s: 4px;   /* inputs, small buttons, chips */
-  --radius-m: 10px;  /* the big record button, dialogs, sheets */
+  --radius-m: 10px;  /* the big record button */
 
   /* Lines and sizes */
   --rule-width: 1px;
@@ -47,24 +45,18 @@
   --measure-phone: 30rem;   /* station screens never get wider than this */
   --measure-laptop: 64rem;  /* organiser and results pages */
 
-  /* Icons: Lucide, 2px stroke, at three sizes */
+  /* Icons: Lucide, 2px stroke, at two sizes */
   --icon-16: 16px;
   --icon-20: 20px;
-  --icon-24: 24px;
 
   /* Focus */
   --focus-width: 2px;
   --focus-offset: 2px;
 
-  /* Motion */
+  /* Motion: presses only, and every transition stays under ~200ms. Nothing has a shadow. */
   --dur-press: 100ms;
-  --dur-ui: 160ms;          /* every interface transition stays under ~200ms */
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --press-scale: 0.97;
-  --enter-scale: 0.95;      /* overlays start here with a fade, never from 0 */
-
-  /* Elevation: overlays only (dialogs, the name picker sheet). Rows and panels are flat. */
-  --shadow-overlay: 0 8px 28px rgb(0 0 0 / 0.18), 0 1px 3px rgb(0 0 0 / 0.12);
 }
 
 /* Light: printed-results paper with club-blue ink. */
@@ -72,7 +64,7 @@
 [data-theme="light"] {
   color-scheme: light;
   --bg: #F6F4EF;            /* page */
-  --surface: #FFFEFB;       /* dialogs, sheets, inputs */
+  --surface: #FFFEFB;       /* inputs, buttons, a hovered row */
   --ink: #1B1D20;           /* main text, 15.4:1 on bg */
   --ink-muted: #5A5D63;     /* secondary text and placeholders, 6.0:1 */
   --ink-faint: #8B8D91;     /* disabled text and ghost digits only */
@@ -84,7 +76,6 @@
   --accent-tint: #E2E9F4;   /* selected row */
   --danger: #A3261A;        /* errors only, 6.7:1 */
   --danger-tint: #F7E3DF;
-  --scrim: rgb(27 29 32 / 0.4);  /* behind sheets and dialogs */
 }
 
 /* Dark: same paper, lights off. */
@@ -103,7 +94,6 @@
   --accent-tint: #1E2A3D;
   --danger: #F2907F;
   --danger-tint: #3A1F1A;
-  --scrim: rgb(0 0 0 / 0.6);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -122,13 +112,11 @@
     --accent-tint: #1E2A3D;
     --danger: #F2907F;
     --danger-tint: #3A1F1A;
-  --scrim: rgb(0 0 0 / 0.6);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --press-scale: 1;
-    --enter-scale: 1;     /* fades stay, movement goes */
+    --press-scale: 1;     /* colour changes stay, movement goes */
   }
 }

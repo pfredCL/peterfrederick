@@ -6,7 +6,8 @@
   src: url("../fonts/overpass-latin-600-normal.woff2") format("woff2"); }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* No browser tap flash: everything tappable has its own pressed state below. */
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
   font-family: var(--font-ui); font-size: var(--text-16); line-height: var(--leading-16);
@@ -78,6 +79,7 @@ button.row:focus-visible { outline-offset: calc(var(--focus-width) * -1); }
 button.row:disabled { cursor: default; color: var(--ink-faint); }
 button.row:disabled .bib { color: var(--ink-faint); }
 @media (hover: hover) and (pointer: fine) { button.row:not(:disabled):hover { background: var(--surface); } }
+button.row:active:not(:disabled) { background: var(--rule); }
 .row > .bib { color: var(--ink-muted); text-align: right; font-variant-numeric: tabular-nums; }
 .row > .main { display: grid; gap: var(--space-2); min-width: 0; }
 .row .sub { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
@@ -129,7 +131,7 @@ button.row:disabled .bib { color: var(--ink-faint); }
   background: var(--surface); color: var(--ink); font-size: var(--text-16); white-space: nowrap; cursor: pointer;
   transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-press) var(--ease-out);
 }
-.button:active:not(:disabled) { transform: scale(var(--press-scale)); }
+.button:active:not(:disabled) { background: var(--rule); }
 .button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: var(--weight-strong); }
 .button.primary:active:not(:disabled) { background: var(--accent-pressed); }
 .button.danger { color: var(--danger); border-color: var(--danger); }
@@ -154,7 +156,10 @@ button.row:disabled .bib { color: var(--ink-faint); }
 }
 .record .what { font-size: var(--text-20); line-height: var(--leading-20); font-weight: var(--weight-strong); }
 .record .clock { font-size: var(--text-32); line-height: var(--leading-32); font-variant-numeric: tabular-nums; }
-.record:active { transform: scale(var(--press-scale)); background: var(--accent-pressed); }
+.record:active { background: var(--accent-pressed); }
+/* Only a tap or click moves a button. A keyboard press changes the colour at once and moves nothing. */
+:is(.button, .record):active:not(:disabled):not(:focus-visible) { transform: scale(var(--press-scale)); }
+:is(.button, .record):focus-visible { transition: none; }
 
 /* ---------- Fields ---------- */
 .field { display: grid; gap: var(--space-2); margin-top: var(--space-5); }
@@ -204,6 +209,7 @@ button.row:disabled .bib { color: var(--ink-faint); }
 .choice:has(input:checked) { background: var(--accent-tint); box-shadow: inset var(--mark-width) 0 0 var(--accent); }
 .choice:has(input:checked) .radio { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 var(--space-1) var(--surface); }
 .choice:has(input:focus-visible) { outline: var(--focus-width) solid var(--accent); outline-offset: calc(var(--focus-width) * -1); }
+.choice:active, .choice:active:has(input:checked) { background: var(--rule); }
 
 /* ---------- Laptop pages ---------- */
 .desk { max-width: var(--measure-laptop); margin: 0 auto; padding: var(--space-6) var(--space-5) var(--space-8); }
@@ -267,6 +273,8 @@ table.data { width: 100%; border-collapse: collapse; white-space: nowrap; }
 .name-button { padding: 0; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .name-button:hover { text-decoration: underline; text-underline-offset: var(--space-1); } }
 tr.is-open td, tr.edit-row td { background: var(--accent-tint); }
+/* Pressed text: links, text buttons and names darken like the primary button does. */
+:is(a, .link-button, .name-button):active { color: var(--accent-pressed); }
 .edit { display: grid; gap: var(--space-3); padding: var(--space-3) 0; white-space: normal; text-align: left; }
 .edit-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .edit-label { width: var(--space-8); color: var(--ink-muted); }

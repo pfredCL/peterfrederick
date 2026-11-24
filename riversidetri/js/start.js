@@ -2,6 +2,7 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  $("race-name").textContent = CONFIG.race.name + " " + CONFIG.race.year;
   const PAGES = { erg: "erg.html", entrance: "entrance.html", exit: "exit.html" };
   const NAMES = { erg: "erg", entrance: "stadium entrance", exit: "stadium exit" };
   const DESK = { organiser: "organiser page", results: "results" };

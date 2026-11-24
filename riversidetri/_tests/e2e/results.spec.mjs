@@ -34,5 +34,6 @@ test("results rank finishers and list non-traditional ones separately", async ({
 test("before anyone finishes, it says so", async ({ signedIn }) => {
   await signedIn.goto("/results.html");
   await expect(signedIn.getByText("No one has finished yet.")).toBeVisible();
+  await expect(signedIn.locator("#race-meta")).toHaveText("Saturday 5 December"); // no "0 finishers"
   await expect(signedIn.locator("#nontrad-block")).toBeHidden();
 });
