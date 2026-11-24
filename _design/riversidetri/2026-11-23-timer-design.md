@@ -305,6 +305,9 @@ These replace the "warm neutrals" and "printed-results paper" above. Chosen from
   `riversidetri/css/tokens.css`, which is now the source of truth (the copy in this folder is the November one).
 - **The club crest sits beside the title** on every page: 32px tall on phones, 56px on laptops; the white
   version in dark mode. It is decorative (the title says the name), so it has empty alt text.
+- **The crest is the tab icon too:** on a white rounded tile (32px), so it shows on dark tab bars as well as
+  light ones. The home-screen icon is the crest on plain white (180px). Chosen 24 November over the bare crest
+  (lost on dark tab bars) and the shield alone (drops the oars).
 - **Less helper text.** Gone: the three station descriptions and the PIN hint on the start page; the two
   section hints on the organiser page ("Start each flight when…", "Click a name to fix a time."); the
   "Right on 7:15" note when a flight starts on time (a late or early start still says how far off it was);

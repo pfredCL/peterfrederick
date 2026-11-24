@@ -23,3 +23,20 @@ test("the fake web app answers like the real one", async ({ app }) => {
   const sent = await post({ pin: PIN, year: 2026, action: "write", events: [{ id: "x1", type: "name", created: 1, target: "nope", competitor: "" }] });
   expect(sent.rejected).toEqual([{ id: "x1", reason: "The time it names isn't in the sheet." }]);
 });
+
+test("every page has the crest as its tab icon and home-screen icon", async ({ app }) => {
+  await app.goto("/css/app.css");
+  for (const page of ["index", "erg", "entrance", "exit", "organiser", "results"]) {
+    const html = await (await app.request.get("/" + page + ".html")).text();
+    expect(html, page).toContain('<link rel="icon" href="img/icon-32.png" sizes="32x32" type="image/png">');
+    expect(html, page).toContain('<link rel="apple-touch-icon" href="img/apple-touch-icon.png">');
+  }
+  const size = (src) => app.evaluate((src) => new Promise((ok, fail) => {
+    const im = new Image();
+    im.onload = () => ok([im.naturalWidth, im.naturalHeight]);
+    im.onerror = fail;
+    im.src = src;
+  }), src);
+  expect(await size("/img/icon-32.png")).toEqual([32, 32]);
+  expect(await size("/img/apple-touch-icon.png")).toEqual([180, 180]);
+});
