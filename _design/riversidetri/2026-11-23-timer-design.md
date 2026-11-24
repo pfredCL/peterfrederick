@@ -79,7 +79,7 @@ riversidetri/
   css/tokens.css        copied from _design/riversidetri/tokens.css
   css/app.css           components, built from tokens only
   fonts/                Overpass 400 and 600, latin subset, woff2 (from Fontsource)
-  js/config.js          the web app URL (not secret)
+  js/config.js          the web app URL (not secret), the race name, year and date
   js/model.js           pure: parse, compute splits, rank, validate, format
   js/store.js           local state, write queue, sync loop, clock offset
   js/time-entry.js      the 00:00.0 field
@@ -94,26 +94,38 @@ stay in the repo without being served.
 
 ## 4. The Sheet
 
-Four tabs. `setup()` (run once from the Apps Script editor) creates any that are missing, writes the
-headers, protects the script-only tabs and adds a "Tri-Wrathlon" menu with "Clear timing data" (asks
-first; empties Events and Results, keeps Competitors) and "Rebuild results".
+Three tabs, each one table that grows year after year: the Sheet is the race's history, not a copy made
+fresh each year. Every tab starts with a **Year** column. The site works on one year at a time, the
+`year` in `js/config.js`, and only reads and writes that year's rows.
 
-**Competitors** — the organiser fills this in before race day and adds late entries here.
+`setup()` (run from the Apps Script editor; safe to run again) creates any tab that is missing, writes the
+headers, inserts the Year column at the left of a tab made before it existed (keeping its rows), protects
+the script-only tabs and adds a "Tri-Wrathlon" menu:
 
-| Name | Number | Flight | Non-traditional | ID |
-|---|---|---|---|---|
-| required | optional, unique whole number | `7:15` or `8:10` (any `h:mm`) | `Yes` or blank | filled in by the script |
+- **Rebuild results** rewrites the Results rows of every year that has events.
+- **Clear timing data** asks which year (typed, so it can't be picked by accident), deletes that year's
+  Events rows, rebuilds that year's Results and refuses any event made before that moment for that year.
+  It does nothing for a year with no events, so a year typed into Results by hand can't be wiped.
 
+**Competitors** — the organiser fills this in before race day and adds late entries here. One row per
+person per year: someone who races two years has two rows.
+
+| Year | Name | Number | Flight | Non-traditional | ID |
+|---|---|---|---|---|---|
+| filled in if blank | required | optional, unique whole number | `7:15` or `8:10` (any `h:mm`) | `Yes` or blank | filled in by the script |
+
+- A named row with a blank Year gets the site's year the next time a phone asks for the state.
 - Blank rows are ignored. Rows can be sorted or edited freely.
 - `ID` is a short random key the script writes into any row that lacks one, so events stay attached to the
   right person even if a name is corrected or rows are re-sorted. Deleting a row orphans its events, which
   then show up in "Needs attention".
-- The flights are whatever distinct values appear in the Flight column, ordered by time.
+- The flights are whatever distinct values appear in that year's Flight column, ordered by time.
 
-**Events** — written only by the script; append-only; protected.
+**Events** — written only by the script; append-only; protected. Each row carries the year it was
+written for.
 
-| Event ID | Type | Created | Time | Received | Competitor | Value | Target | Station | Device |
-|---|---|---|---|---|---|---|---|---|---|
+| Year | Event ID | Type | Created | Time | Received | Competitor | Value | Target | Station | Device |
+|---|---|---|---|---|---|---|---|---|---|---|
 
 `Created` is when the event was made on the device (clock-corrected, section 6). `Time` is the moment the
 event is about: the tap, or the flight start. `Received` is when the server stored it.
@@ -132,11 +144,18 @@ one. "Later" means a later `Created`, with `Received` breaking ties, so a phone 
 an old entry late can't overwrite a newer correction. `void` removes an event from every calculation.
 Event IDs are made on the device (UUIDs), so resending the same event is harmless.
 
-**Results** — rewritten by the script after every write: place, name, erg, run, stadium, total,
-non-traditional, then anyone not finished. It means the Sheet alone still shows the results if the site
-ever fails.
+**Results** — one row per competitor per year, newest year first, so it filters and sorts like any table:
 
-**Script properties** — `PIN`. The PIN is never stored in the repo or the front-end code.
+| Year | Place | Name | Number | Flight | Erg | Run | Stadium | Total | Non-traditional | Status |
+|---|---|---|---|---|---|---|---|---|---|---|
+
+Within a year: finishers in place order, then non-traditional finishers in their own place order (name
+marked `*`), then anyone not finished (no place). After every write the script rewrites that year's rows
+and leaves every other year's rows alone, so past years can be typed in by hand later. It means the Sheet
+alone still shows the results if the site ever fails.
+
+**Script properties** — `PIN`, and `CLEARED_AT_<year>` set by "Clear timing data". The PIN is never
+stored in the repo or the front-end code.
 
 ## 5. The web app API
 
@@ -144,17 +163,21 @@ One URL, `POST` only, body sent as `text/plain` JSON so browsers make no CORS pr
 travels in the body, never in the URL.
 
 ```
-request   { "pin": "…", "action": "state" }
-request   { "pin": "…", "action": "write", "events": [ { "id", "type", "created", "time", "competitor", "value", "target", "station", "device" } ] }
+request   { "pin": "…", "year": 2026, "action": "state" }
+request   { "pin": "…", "year": 2026, "action": "write", "events": [ { "id", "type", "created", "time", "competitor", "value", "target", "station", "device" } ] }
 response  { "ok": true, "serverTime": 1764940000000, "state": { "competitors": [...], "events": [...] } }
 response  { "ok": false, "error": "pin" | "bad-request" | "server", "message": "…", "rejected": [ { "id", "reason" } ] }
 ```
 
 - `write` takes the script lock, skips any event ID already stored, appends the rest, rewrites the Results
   tab, clears the cache and returns fresh state.
-- The server checks shape only: known type, known competitor ID, known tap ID, numbers where numbers belong.
+- Every request carries the site's `year`, a four-digit number; without one the answer is `bad-request`
+  with "This page is out of date. Reload it." `state` returns only that year's competitors and events;
+  `write` stamps each new event with it.
+- The server checks shape only: known type, competitor ID known for that year, tap ID known for that year,
+  numbers where numbers belong. An event ID stored in any year counts as already stored.
   The front end does the real validation (section 8).
-- `state` is cached with Apps Script's CacheService for up to 60 seconds. Any write clears it, and an
+- `state` is cached per year with Apps Script's CacheService for up to 60 seconds. Any write clears it, and an
   `onEdit` trigger clears it whenever someone edits the Sheet by hand, so edits to Competitors show up on
   the next refresh.
 - The same PIN opens the stations, the organiser page and the results page.
@@ -291,7 +314,8 @@ On the server: event shape only (section 5).
 2. Deploy → New deployment → Web app: execute as me, access "Anyone". Send the web app URL; it goes into
    `js/config.js`.
 3. Merge `riversidetri` into `main`; GitHub Pages publishes `peterfrederick.com/riversidetri/`.
-4. Fill in Competitors. Rehearse. Clear timing data.
+4. Fill in Competitors. Rehearse. Clear timing data for the year.
+   Each later year: add that year's Competitors rows, change `year` and `date` in `js/config.js`, rehearse.
 5. Race day: volunteers open the link, pick their station, enter the PIN. If the site fails, the Sheet's
    Events and Results tabs still hold everything recorded.
 
@@ -308,5 +332,6 @@ On the server: event shape only (section 5).
 ## 13. Out of scope
 
 Adding or editing competitors in the app, a public or spectator view, sending the results email, printing
-numbers, keeping past years in the app (next year starts from a fresh copy of the Sheet), and a
+numbers, showing past years on the site (they are in the Sheet), typing in the years before 2026 (later,
+by hand into Results), and a
 single-tap "name and record" shortcut.
