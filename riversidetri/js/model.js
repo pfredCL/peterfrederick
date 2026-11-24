@@ -337,11 +337,75 @@ var Model = (function () {
 
   // ---- Lists for the screens ----
 
+  // Finishers by total, fastest first; equal totals share a place. Non-traditional ranked separately.
+  function rank(people) {
+    const ranked = (list) => {
+      list.sort((a, b) => a.total - b.total || a.name.localeCompare(b.name));
+      let place = 0;
+      return list.map((p, i) => {
+        if (i === 0 || p.total !== list[i - 1].total) place = i + 1;
+        return { place: place, person: p };
+      });
+    };
+    const done = people.filter((p) => has(p.total));
+    return { overall: ranked(done.filter((p) => !p.nontrad)), nontrad: ranked(done.filter((p) => p.nontrad)) };
+  }
+
+  // People in flight groups: started flights first, then by time; first names within each; no flight last.
+  function groupByFlight(view, people) {
+    const order = view.flights.filter((f) => has(f.start)).concat(view.flights.filter((f) => !has(f.start)));
+    const groups = order.map((f) => ({ flight: f.label, started: has(f.start), people: people.filter((p) => p.flight === f.label).sort(byName) }));
+    groups.push({ flight: "", started: false, people: people.filter((p) => !p.flight).sort(byName) });
+    return groups.filter((g) => g.people.length);
+  }
+
+  function waitingForErg(view) {
+    return groupByFlight(view, view.people.filter((p) => !has(p.erg)));
+  }
+
+  // Newest first.
+  function ergEntered(view) {
+    return view.people.filter((p) => has(p.erg)).sort((a, b) => b.ergCreated - a.ergCreated);
+  }
+
+  // Who a new stadium time could belong to. Exit: those in the stadium, then (extra) anyone missed at the entrance.
+  function nameCandidates(view, station) {
+    const started = view.people.filter((p) => has(p.start));
+    if (station === "entrance") return { main: groupByFlight(view, started.filter((p) => !has(p.arrival))), extra: [] };
+    return {
+      main: groupByFlight(view, started.filter((p) => has(p.arrival) && !has(p.finish))),
+      extra: groupByFlight(view, started.filter((p) => !has(p.arrival) && !has(p.finish))),
+    };
+  }
+
+  // Oldest first.
+  function unnamedTaps(view, station) {
+    return view.taps[station].filter((t) => !t.competitor);
+  }
+
+  // Newest first, each with its person.
+  function namedTaps(view, station) {
+    return view.taps[station]
+      .filter((t) => t.competitor)
+      .map((t) => Object.assign({ person: view.byId[t.competitor] }, t))
+      .sort((a, b) => b.time - a.time);
+  }
+
+  // Clock samples { rtt, offset } -> the offset from the quickest round trip, or null with none.
+  function bestOffset(samples) {
+    if (!samples || !samples.length) return null;
+    let best = samples[0];
+    samples.forEach((s) => { if (s.rtt < best.rtt) best = s; });
+    return best.offset;
+  }
+
   return {
     ERG_ERRORS, STATION_NAMES,
     formatTenths, formatClock, parseFlight, atMinutes, parseTimeOfDay, durationText, startNote, dueNote,
     ergEntry, tenthsToDigits, ergOutsideMessage,
-    normaliseRoster, resolve, compute, buildView,
+    normaliseRoster, resolve, compute, buildView, rank,
+    groupByFlight, waitingForErg, ergEntered, nameCandidates, unnamedTaps, namedTaps, bestOffset,
   };
+
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = Model;
