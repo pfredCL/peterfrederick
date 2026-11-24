@@ -50,7 +50,7 @@ var UI = (function () {
 
   // id must already be escaped by the caller.
   function errorLine(message, id) {
-    return '<p class="row-error"' + (id ? ' id="' + id + '"' : "") + ">" + icon("alert", "icon-16") + "<span>" + esc(message) + "</span></p>";
+    return '<p class="row-error"' + (id ? ' id="' + id + '"' : "") + ' role="alert">' + icon("alert", "icon-16") + "<span>" + esc(message) + "</span></p>";
   }
 
   // Only touch the DOM when the HTML actually changed, so polling doesn't disturb taps or focus.

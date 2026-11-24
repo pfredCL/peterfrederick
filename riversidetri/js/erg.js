@@ -2,11 +2,14 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  const NONE_YET = '<p class="empty-line">No erg times yet.</p>';
   const HINT = "Type the digits only. The colon and decimal point fill in for you.";
   let open = null;  // { id, list: "waiting" | "entered", digits, error, confirm, tenths }
   let entry = null; // the mounted TimeEntry in the open row
   let query = "";
   let showAll = false;
+  let notice = ""; // shown at the top of the waiting list until a row is opened again
+  const GONE = "That person is no longer on the start list, so the time wasn't saved.";
 
   const store = UI.boot(render);
   if (!store) return;
@@ -15,7 +18,10 @@
 
   $("search").addEventListener("input", (e) => {
     query = e.target.value;
-    if (open && open.list === "waiting") open = null;
+    if (open && open.list === "waiting") {
+      const pp = store.view() && store.view().byId[open.id];
+      if (!pp || !UI.matches(pp, query)) open = null;
+    }
     render(true);
   });
   document.querySelector("main").addEventListener("click", onClick);
@@ -23,17 +29,19 @@
   function render(force) {
     UI.renderStatus(store);
     const v = store.view();
-    if (!v) { UI.setHtml($("waiting"), UI.loading(store)); return; }
-    if (!v.people.length) { UI.setHtml($("waiting"), UI.emptyRoster()); return; }
+    if (!v) { UI.setHtml($("waiting"), UI.loading(store)); UI.setHtml($("entered"), NONE_YET); return; }
+    if (!v.people.length) { UI.setHtml($("waiting"), UI.emptyRoster()); UI.setHtml($("entered"), NONE_YET); return; }
+    if (open && !v.byId[open.id]) { open = null; force = true; setNotice(); }
     // Don't rebuild the rows under someone's thumb while they type a time.
     if (!force && open && document.activeElement && document.activeElement.closest(".is-open")) return;
-    if (open && !v.byId[open.id]) open = null;
     renderWaiting(v);
     renderEntered(v);
     const complete = v.flights.filter((f) => v.people.every((p) => p.flight !== f.label || p.erg !== null));
-    UI.setHtml($("erg-status"), complete.map((f) => "All " + f.count + " times from the " + f.label + " flight are in.").join(" "));
+    UI.setHtml($("erg-status"), complete.map((f) => (f.count === 1 ? "All 1 time from the " + f.label + " flight is in." : "All " + f.count + " times from the " + f.label + " flight are in.")).join(" "));
     mountEntry();
   }
+
+  function setNotice() { notice = GONE; UI.announce(GONE); }
 
   function renderWaiting(v) {
     const all = Model.waitingForErg(v);
@@ -50,13 +58,13 @@
         g.people.map((p) => (open && open.list === "waiting" && open.id === p.id ? openRow(p) : UI.personRow(p, 'data-open="' + UI.esc(p.id) + '"', ""))).join("") +
         "</ul>").join("");
     }
-    UI.setHtml($("waiting"), html);
+    UI.setHtml($("waiting"), (notice ? '<p class="empty-line">' + UI.esc(notice) + "</p>" : "") + html);
   }
 
   function renderEntered(v) {
     const done = Model.ergEntered(v);
     $("entered-count").textContent = done.length ? String(done.length) : "";
-    if (!done.length) { UI.setHtml($("entered"), '<p class="empty-line">No erg times yet.</p>'); return; }
+    if (!done.length) { UI.setHtml($("entered"), NONE_YET); return; }
     const shown = showAll ? done : done.slice(0, 3);
     let html = '<ul class="list">' + shown.map((p) => (open && open.list === "entered" && open.id === p.id
       ? openRow(p)
@@ -80,8 +88,8 @@
     const disabled = open.confirm || open.digits.length < 4 ? " disabled" : "";
     return '<li><div class="row is-open' + (open.error ? " has-error" : "") + '">' +
       '<span class="bib">' + UI.num(p) + '</span><span class="main"><span class="name">' + UI.esc(p.name) + "</span></span>" +
-      '<button type="button" class="link-button" data-close>Cancel</button>' +
-      '<div class="row-entry">' + TimeEntry.html("erg-input", "Erg time for " + UI.esc(p.name), open.digits) +
+      '<button type="button" class="link-button" data-close aria-label="Cancel the time for ' + UI.esc(p.name) + '">Cancel</button>' +
+      '<div class="row-entry">' + TimeEntry.html("erg-input", "Erg time for " + UI.esc(p.name), open.digits, "open-msg") +
       '<button type="button" class="button primary" data-save' + disabled + "><span>Save</span></button></div>" +
       foot + "</div></li>";
   }
@@ -93,6 +101,13 @@
         open.digits = d;
         const row = root.closest(".row");
         row.querySelector("[data-save]").disabled = d.length < 4;
+        if (open.confirm) {
+          open.confirm = null;
+          open.tenths = null;
+          render(true);
+          if (entry) entry.focus();
+          return;
+        }
         if (open.error) {
           open.error = null;
           row.classList.remove("has-error");
@@ -106,6 +121,7 @@
 
   function openFor(id, list) {
     const p = store.view().byId[id];
+    notice = "";
     open = { id: id, list: list, digits: list === "entered" ? Model.tenthsToDigits(p.erg) : "", error: null, confirm: null, tenths: null };
     render(true);
     if (entry) entry.focus();
@@ -121,6 +137,7 @@
   function save(confirmed) {
     if (!open) return;
     const p = store.view().byId[open.id];
+    if (!p) { open = null; setNotice(); render(true); UI.focus("#search"); return; }
     const r = Model.ergEntry(open.digits);
     if (r.error) {
       open.error = Model.ERG_ERRORS[r.error];
@@ -138,6 +155,7 @@
     query = "";
     $("search").value = "";
     render(true);
+    UI.focus("#search");
   }
 
   function onClick(e) {

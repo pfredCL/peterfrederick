@@ -16,9 +16,9 @@ var TimeEntry = (function () {
   }
 
   // label and id must already be HTML-escaped.
-  function html(id, label, digits) {
+  function html(id, label, digits, describedBy) {
     return '<div class="time-entry"><input class="time-input" id="' + id + '" inputmode="numeric" autocomplete="off" spellcheck="false" autocapitalize="off" enterkeyhint="done" aria-label="' +
-      label + '" value="' + format(digitsOf(digits)) + '"><div class="time-display" aria-hidden="true"></div></div>';
+      label + '" value="' + format(digitsOf(digits)) + '"' + (describedBy ? ' aria-describedby="' + describedBy + '"' : "") + '><div class="time-display" aria-hidden="true"></div></div>';
   }
 
   // root is the .time-entry element. Mounting the same element twice returns the first handle.
@@ -53,7 +53,7 @@ var TimeEntry = (function () {
       if (e.key === "Enter" && opts.onEnter) { e.preventDefault(); opts.onEnter(); }
       if (e.key === "Escape" && opts.onEscape) { e.preventDefault(); opts.onEscape(); }
     });
-    input.addEventListener("focus", () => requestAnimationFrame(toEnd));
+    input.addEventListener("focus", () => { toEnd(); requestAnimationFrame(toEnd); });
     input.addEventListener("pointerup", () => requestAnimationFrame(toEnd));
     paint();
     root.__timeEntry = { input: input, digits: () => digitsOf(input.value), focus: () => input.focus() };

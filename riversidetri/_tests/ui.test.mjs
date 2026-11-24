@@ -48,3 +48,12 @@ test("the time field fills in the punctuation", () => {
   assert.equal(TimeEntry.format("102160"), "1:02:16.0");
   assert.equal(TimeEntry.digitsOf("38:16.0x9"), "381609");
 });
+
+test("an error line is announced to screen readers", () => {
+  assert.match(UI.errorLine("Bad time", "m"), /<p class="row-error" id="m" role="alert">/);
+});
+
+test("the time field points at its hint only when told to", () => {
+  assert.doesNotMatch(TimeEntry.html("x", "Erg time", "381"), /aria-describedby/);
+  assert.match(TimeEntry.html("x", "Erg time", "381", "open-msg"), /aria-describedby="open-msg"/);
+});
