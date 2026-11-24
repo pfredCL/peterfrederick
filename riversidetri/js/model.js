@@ -218,13 +218,115 @@ var Model = (function () {
 
   // ---- The race ----
 
+  // Competitors (from normaliseRoster) + events -> everything the screens show.
+  function compute(competitors, events, now) {
+    const r = resolve(events);
+    const byId = {};
+    const issues = [];
+    const people = competitors.map((c) => {
+      const p = {
+        id: c.id, name: c.name, number: c.number, flight: c.flight, flightMinutes: c.flightMinutes, nontrad: c.nontrad,
+        start: null, erg: null, ergCreated: null, arrival: null, arrivalTapId: null, finish: null, finishTapId: null,
+        run: null, stadium: null, total: null, status: "Not started",
+      };
+      byId[c.id] = p;
+      return p;
+    });
+
+    const flightMap = {};
+    competitors.forEach((c) => {
+      if (!c.flight) return;
+      if (!flightMap[c.flight]) flightMap[c.flight] = { label: c.flight, minutes: c.flightMinutes, count: 0, start: null, startEventId: null, startEventIds: [] };
+      flightMap[c.flight].count++;
+    });
+    const flights = Object.keys(flightMap).map((k) => flightMap[k]).sort((a, b) => a.minutes - b.minutes);
+    flights.forEach((f) => {
+      const s = r.starts[f.label];
+      if (s) { f.start = Number(s.time); f.startEventId = s.id; f.startEventIds = r.startIds[f.label]; }
+    });
+
+    Object.keys(r.ergs).forEach((cid) => {
+      const e = r.ergs[cid];
+      if (byId[cid]) { byId[cid].erg = Number(e.value); byId[cid].ergCreated = e.created; }
+      else issues.push(issue("orphan", "An erg time of " + formatTenths(Number(e.value)) + " belongs to someone no longer in Competitors."));
+    });
+
+    const taps = { entrance: [], exit: [] };
+    r.taps.forEach((t) => {
+      if (!taps[t.station]) return;
+      const n = r.names[t.id];
+      const cid = n && n.competitor && byId[n.competitor] ? n.competitor : "";
+      taps[t.station].push({ id: t.id, station: t.station, time: Number(t.time), competitor: cid });
+    });
+
+    STATIONS.forEach((st) => {
+      const key = st === "entrance" ? "arrival" : "finish";
+      const seen = {};
+      taps[st].forEach((tap) => {
+        if (!tap.competitor) return;
+        if (seen[tap.competitor]) { seen[tap.competitor].push(tap); return; }
+        seen[tap.competitor] = [tap];
+        byId[tap.competitor][key] = tap.time;
+        byId[tap.competitor][key + "TapId"] = tap.id;
+      });
+      Object.keys(seen).forEach((cid) => {
+        const list = seen[cid];
+        if (list.length < 2) return;
+        issues.push(issue("duplicate", byId[cid].name + " is named on " + list.length + " " + STATION_NAMES[st].toLowerCase() +
+          " times (" + list.map((t) => formatClock(t.time, true)).join(", ") + "). The earliest counts until you fix it.", { competitor: cid, station: st }));
+      });
+      const unnamed = taps[st].filter((t) => !t.competitor && now - t.time > UNNAMED_AFTER_MS);
+      if (unnamed.length) {
+        issues.push(issue("unnamed", STATION_NAMES[st] + " has " + (unnamed.length === 1 ? "a time" : unnamed.length + " times") +
+          " without a name, the oldest from " + formatClock(unnamed[0].time, true) + ".", { station: st }));
+      }
+    });
+
+    const startOf = {};
+    flights.forEach((f) => { startOf[f.label] = f.start; });
+    people.forEach((p) => {
+      p.start = has(startOf[p.flight]) ? startOf[p.flight] : null;
+      // Rounding rule: arrival and finish become tenths after the start first, so the row adds up exactly.
+      const A = has(p.start) && has(p.arrival) ? Math.round((p.arrival - p.start) / 100) : null;
+      const F = has(p.start) && has(p.finish) ? Math.round((p.finish - p.start) / 100) : null;
+      if (has(A) && has(p.erg)) p.run = A - p.erg;
+      if (has(p.arrival) && has(p.finish)) p.stadium = has(A) && has(F) ? F - A : Math.round((p.finish - p.arrival) / 100);
+      if (has(p.run) && has(p.stadium) && has(F)) p.total = F;
+      p.status = has(p.finish) ? "Finished" : has(p.arrival) ? "In the stadium" : !has(p.start) ? "Not started" : has(p.erg) ? "On the run" : "On the erg";
+
+      const who = { competitor: p.id };
+      if (has(p.arrival) && !has(p.erg)) issues.push(issue("ergMissing", p.name + " has arrived at the stadium but has no erg time.", who));
+      if (has(p.finish) && !has(p.arrival)) issues.push(issue("arrivalMissing", p.name + " has finished but has no stadium arrival.", who));
+      if (has(p.run) && p.run <= 0) {
+        issues.push(issue("run", p.name + "'s arrival is before the end of their erg. Check the erg time and the arrival.", who));
+      } else if (has(p.run) && (p.run < RUN_MIN || p.run > RUN_MAX)) {
+        issues.push(issue("run", p.name + "'s run of " + formatTenths(p.run) + " is " + (p.run < RUN_MIN ? "under 20 minutes" : "over 2 hours") +
+          ". Check the erg time and the arrival.", who));
+      }
+      if (has(p.stadium) && (p.stadium < STADIUM_MIN || p.stadium > STADIUM_MAX)) {
+        issues.push(issue("stadium", p.name + "'s stadium time of " + formatTenths(p.stadium) + " is " +
+          (p.stadium < STADIUM_MIN ? "under 10 minutes" : "over 90 minutes") + ". Check the arrival and the finish.", who));
+      }
+    });
+
+    return { flights: flights, people: people, byId: byId, taps: taps, issues: issues };
+  }
+
+  // Raw Competitors rows + events -> the view, with roster problems listed first.
+  function buildView(rows, events, now) {
+    const roster = normaliseRoster(rows);
+    const view = compute(roster.competitors, events, now);
+    view.issues = roster.issues.concat(view.issues);
+    return view;
+  }
+
   // ---- Lists for the screens ----
 
   return {
     ERG_ERRORS, STATION_NAMES,
     formatTenths, formatClock, parseFlight, atMinutes, parseTimeOfDay, durationText, startNote, dueNote,
     ergEntry, tenthsToDigits, ergOutsideMessage,
-    normaliseRoster, resolve,
+    normaliseRoster, resolve, compute, buildView,
   };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = Model;
