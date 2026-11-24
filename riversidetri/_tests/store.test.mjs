@@ -181,6 +181,30 @@ test("with no storage given and no window the store still works", async () => {
   assert.equal(store.status().pending, 1);
 });
 
+test("the in-memory fallback says storageFailing from the start", () => {
+  globalThis.window = { get localStorage() { throw new Error("blocked"); } };
+  try {
+    const store = Store.create({ url: "", now: () => 1, later() {}, uuid: () => "b1" });
+    assert.equal(store.status().storageFailing, true);
+  } finally {
+    delete globalThis.window;
+  }
+});
+
+test("a rejected-list save failure stays visible after a later good queue save", () => {
+  const m = new Map([["tw:rejected", JSON.stringify([{ event: { id: "r1" }, reason: "x" }])]]);
+  const storage = {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem(k, v) { if (k === "tw:rejected") throw new Error("quota"); m.set(k, String(v)); },
+  };
+  const store = Store.create({ url: "", storage, now: () => 1, later() {}, uuid: () => "q1" });
+  assert.equal(store.status().storageFailing, false);
+  store.dismissRejected(0);
+  assert.equal(store.status().storageFailing, true);
+  store.add({ type: "tap", station: "entrance", time: 1 });
+  assert.equal(store.status().storageFailing, true);
+});
+
 test("stored values of the wrong shape are ignored", () => {
   const m = new Map([["tw:queue", '{"a":1}'], ["tw:rejected", "5"], ["tw:samples", '"x"']]);
   const storage = { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) };

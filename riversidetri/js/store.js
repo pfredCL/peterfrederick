@@ -12,6 +12,7 @@ var Store = (function () {
     try { if (typeof window !== "undefined" && window.localStorage) return window.localStorage; } catch (e) { /* blocked */ }
     const m = {};
     return {
+      isMemory: true,
       getItem: (k) => (Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null),
       setItem: (k, v) => { m[k] = String(v); },
       removeItem: (k) => { delete m[k]; },
@@ -23,6 +24,7 @@ var Store = (function () {
     const fetchImpl = opts.fetch || ((u, o) => fetch(u, o));
     const timeoutMs = opts.timeoutMs || 15000;
     const storage = opts.storage || defaultStorage();
+    const memoryOnly = storage.isMemory === true;
     const now = opts.now || (() => Date.now());
     const later = opts.later || ((fn, ms) => setTimeout(fn, ms));
     const uuid = opts.uuid || (() => crypto.randomUUID());
@@ -46,7 +48,7 @@ var Store = (function () {
     const s = {
       pin: load("pin", ""), station: load("station", ""), device: load("device", "") || uuid(),
       state: load("state", null), queue: load("queue", []), rejected: load("rejected", []), samples: load("samples", []),
-      inflight: null, readFailingSince: null, writeFailingSince: null, storageFailing: false,
+      inflight: null, readFailingSince: null, writeFailingSince: null, queueSaveFailed: false, rejectedSaveFailed: false,
       confirmed: {}, stateAt: null, started: false, pinError: false, retries: 0, retryPending: false,
     };
     save("device", s.device);
@@ -68,9 +70,9 @@ var Store = (function () {
       stored.forEach((e) => {
         if (e && e.id && !mine[e.id] && !s.confirmed[e.id]) { mine[e.id] = true; s.queue.push(e); }
       });
-      s.storageFailing = !save("queue", s.queue);
+      s.queueSaveFailed = !save("queue", s.queue);
     }
-    function saveRejected() { if (!save("rejected", s.rejected)) s.storageFailing = true; }
+    function saveRejected() { s.rejectedSaveFailed = !save("rejected", s.rejected); }
 
     async function call(body) {
       const t0 = now();
@@ -198,7 +200,7 @@ var Store = (function () {
       return {
         loaded: !!s.state, pending: s.queue.length, pinError: s.pinError, rejected: s.rejected.slice(),
         failing: [s.readFailingSince, s.writeFailingSince].some((t) => t !== null && now() - t >= FAILING_AFTER_MS),
-        storageFailing: s.storageFailing,
+        storageFailing: memoryOnly || s.queueSaveFailed || s.rejectedSaveFailed,
       };
     }
 
