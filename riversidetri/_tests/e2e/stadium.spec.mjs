@@ -30,9 +30,10 @@ test("record, then tap who it was: the oldest time is named first", async ({ sig
 test("a press 100 ms after another is ignored and says so", async ({ signedIn }) => {
   await signedIn.goto("/entrance.html");
   const record = signedIn.getByRole("button", { name: "Record arrival" });
-  await record.click();
-  await signedIn.waitForTimeout(100);
-  await record.click();
+  await expect(record).toBeVisible();
+  // Two Playwright clicks can land more than 300 ms apart on a slow run, so press twice
+  // inside the page, 100 ms apart, where the timing is exact.
+  await record.evaluate((b) => new Promise((done) => { b.click(); setTimeout(() => { b.click(); done(); }, 100); }));
   await expect(signedIn.locator("#live")).toHaveText("That was a double press, so only one time was recorded.");
   await expect(signedIn.locator("#queue .stamp-item")).toHaveCount(1);
 });
