@@ -101,7 +101,9 @@ function readEvents() {
 }
 
 // Every write changes "gen", so a reader that started before the write can't cache its stale copy.
+// Flushing first means a reader that starts after this sees the new rows, not the old sheet.
 function invalidate() {
+  SpreadsheetApp.flush();
   const cache = CacheService.getScriptCache();
   cache.put("gen", String(Date.now()) + Math.random(), 21600);
   cache.remove(CACHE_KEY);
