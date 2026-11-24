@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Start · Tri-Wrathlon mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="mockup.css">
+<!-- Mockup only: #dark or #light in the address forces a theme for screenshots. -->
+<script>if (location.hash === "#dark" || location.hash === "#light") document.documentElement.dataset.theme = location.hash.slice(1);</script>
+</head>
+<body>
+<div class="phone">
+  <header class="topbar"><h1>RBC Tri-Wrathlon</h1></header>
+  <main class="content">
+    <h2 class="page-title">Which station are you at?</h2>
+    <ul class="choices" role="radiogroup" aria-label="Station"><li class="choice" role="radio" aria-checked="false"><span class="radio"></span><span class="choice-text"><span class="choice-name">Erg</span><span class="choice-sub">In the boathouse. Type each rower's time from the monitor.</span></span></li><li class="choice is-selected" role="radio" aria-checked="true"><span class="radio"></span><span class="choice-text"><span class="choice-name">Stadium entrance</span><span class="choice-sub">Where the run ends. Tap as each runner comes in.</span></span></li><li class="choice" role="radio" aria-checked="false"><span class="radio"></span><span class="choice-text"><span class="choice-name">Stadium exit</span><span class="choice-sub">The finish. Tap as each runner comes out.</span></span></li></ul>
+    <div class="field">
+      <label for="pin">Station PIN</label>
+      <input class="text-input" id="pin" type="password" inputmode="numeric" value="4127" autocomplete="off">
+      <span class="hint">Ask the race organiser for it. You only need it once on this phone.</span>
+    </div>
+    <div class="after-form"><button class="button primary block" type="button"><span>Open stadium entrance</span></button></div>
+    <p class="footer-links">Organising? Open the <a href="organiser.html">organiser page</a> or the <a href="results.html">results</a>.</p>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tri-Wrathlon timer: design tokens (draft)</title>
+<!-- Review sheet only: fonts come from Google here. The app self-hosts the same files. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--text-16);
+    line-height: var(--leading-16);
+  }
+  .page { max-width: var(--measure-laptop); margin: 0 auto; padding: var(--space-7) var(--space-4) var(--space-8); }
+  h1, h2, h3 { font-weight: var(--weight-strong); margin: 0; }
+  h1 { font-size: var(--text-32); line-height: var(--leading-32); }
+  h2 { font-size: var(--text-24); line-height: var(--leading-24); margin-bottom: var(--space-4); }
+  h3 { font-size: var(--text-16); line-height: var(--leading-16); margin-bottom: var(--space-3); }
+  p { margin: 0 0 var(--space-3); max-width: 40rem; }
+  .muted { color: var(--ink-muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  section { padding-top: var(--space-6); margin-top: var(--space-6); border-top: var(--rule-width) solid var(--rule); }
+  ul.plain { margin: 0; padding-left: var(--space-5); max-width: 40rem; }
+  ul.plain li { margin-bottom: var(--space-2); }
+
+  .pair { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
+  .pair > * { min-width: 0; }
+  @media (min-width: 52rem) { .pair { grid-template-columns: 1fr 1fr; } }
+  .theme-panel {
+    background: var(--bg);
+    color: var(--ink);
+    border: var(--rule-width) solid var(--rule);
+    border-radius: var(--radius-m);
+    padding: var(--space-4);
+  }
+  .theme-panel > h3 { color: var(--ink-muted); font-weight: var(--weight-regular); }
+
+  /* Swatches */
+  .swatches { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+  .swatch { display: grid; grid-template-columns: var(--space-7) 1fr auto; gap: var(--space-3); align-items: center; padding: var(--space-2) 0; border-bottom: var(--rule-width) solid var(--rule); }
+  .swatch:last-child { border-bottom: 0; }
+  .chip { width: var(--space-7); height: var(--space-6); border-radius: var(--radius-s); border: var(--rule-width) solid var(--rule); }
+  .swatch-name { font-variant-numeric: tabular-nums; font-size: var(--text-14); line-height: var(--leading-14); }
+  .swatch-role { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
+  .swatch-meta { font-variant-numeric: tabular-nums; font-size: var(--text-12); line-height: var(--leading-12); color: var(--ink-muted); text-align: right; }
+
+  /* Type specimens */
+  .type-row { display: grid; grid-template-columns: 5.5rem 1fr; gap: var(--space-4); align-items: baseline; padding: var(--space-3) 0; border-bottom: var(--rule-width) solid var(--rule); }
+  .type-row .label { font-variant-numeric: tabular-nums; font-size: var(--text-12); line-height: var(--leading-12); color: var(--ink-muted); }
+  @media (max-width: 30rem) { .type-row { grid-template-columns: 1fr; gap: var(--space-1); } }
+
+  /* Spacing and radii */
+  .space-row { display: grid; grid-template-columns: 5.5rem 1fr; gap: var(--space-4); align-items: center; padding: var(--space-1) 0; }
+  .space-bar { height: var(--space-3); background: var(--accent); border-radius: 1px; }
+  .radii { display: flex; gap: var(--space-5); flex-wrap: wrap; }
+  .radius-demo { width: 7rem; height: 4.5rem; border: var(--rule-width) solid var(--rule-strong); display: grid; place-items: center; font-variant-numeric: tabular-nums; font-size: var(--text-12); color: var(--ink-muted); }
+
+  /* In-context components (built from tokens only) */
+  /* Text inside a box (buttons, tinted rows) is trimmed to cap height and baseline so it
+     centres optically; Overpass's line box otherwise leaves it sitting a few pixels high. */
+  .record > span, .btn > span, .person > span { text-box: trim-both cap alphabetic; }
+  .station-title { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-4); }
+  .station-title strong { font-size: var(--text-20); line-height: var(--leading-20); font-weight: var(--weight-strong); }
+  .station-title span { font-size: var(--text-14); color: var(--ink-muted); }
+
+  .record {
+    display: grid; place-content: center; gap: var(--space-3);
+    width: 100%; min-height: var(--tap-primary);
+    border: 0; border-radius: var(--radius-m);
+    background: var(--accent); color: var(--on-accent);
+    font: inherit; text-align: center; cursor: pointer;
+    transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-press) var(--ease-out);
+  }
+  .record .what { font-size: var(--text-20); line-height: var(--leading-20); font-weight: var(--weight-strong); }
+  .record .clock { font-variant-numeric: tabular-nums; font-size: var(--text-32); line-height: var(--leading-32); }
+  .record:active, .record.is-pressed { transform: scale(var(--press-scale)); background: var(--accent-pressed); }
+  .record:disabled, .record.is-disabled { background: var(--rule); color: var(--ink-faint); cursor: not-allowed; transform: none; }
+  :is(button, input, a):focus-visible, .is-focus { outline: var(--focus-width) solid var(--accent); outline-offset: var(--focus-offset); }
+  .state-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); margin-top: var(--space-3); }
+  .state-strip .record { min-height: var(--space-8); gap: var(--space-2); }
+  .state-strip .record .clock { font-size: var(--text-16); line-height: var(--leading-16); }
+  .state-strip .record .what { font-size: var(--text-14); line-height: var(--leading-14); }
+  .state-caption { font-size: var(--text-12); line-height: var(--leading-12); color: var(--ink-muted); text-align: center; margin-top: var(--space-1); }
+
+  .stamp {
+    display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) 0; border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .stamp .t { font-variant-numeric: tabular-nums; font-size: var(--text-20); line-height: var(--leading-20); }
+  .stamp .sub { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
+  .btn {
+    min-height: var(--tap-min); padding: 0 var(--space-4);
+    border: var(--rule-width) solid var(--rule-strong); border-radius: var(--radius-s);
+    background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    transition: transform var(--dur-press) var(--ease-out);
+  }
+  .btn:active { transform: scale(var(--press-scale)); }
+  .btn svg { width: var(--icon-20); height: var(--icon-20); }
+
+  .person {
+    display: grid; grid-template-columns: 2.5rem 1fr auto; align-items: center; gap: var(--space-3);
+    min-height: var(--tap-min); padding: var(--space-2) 0; border-bottom: var(--rule-width) solid var(--rule);
+  }
+  .person .no { font-variant-numeric: tabular-nums; color: var(--ink-muted); text-align: right; }
+  .person .name { font-size: var(--text-16); }
+  .person .flight { font-size: var(--text-14); color: var(--ink-muted); }
+  .person.is-selected { background: var(--accent-tint); box-shadow: inset var(--mark-width) 0 0 var(--accent); }
+
+  .field { display: grid; gap: var(--space-2); margin-top: var(--space-5); }
+  .field label { font-size: var(--text-14); line-height: var(--leading-14); }
+  .field .hint { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
+  .field .error { display: flex; gap: var(--space-2); align-items: flex-start; font-size: var(--text-14); line-height: var(--leading-14); color: var(--danger); }
+  .field .error[hidden], .field .hint[hidden] { display: none; }
+  .field .error svg { flex: none; width: var(--icon-16); height: var(--icon-16); margin-top: calc((var(--leading-14) - var(--icon-16)) / 2); }
+
+  /* Time entry: digits only. The field shows 00:00.0 with ghost zeros; typed digits replace
+     them from the left, and the colon and decimal point are always printed in ink, so the
+     volunteer only ever types numbers. The phone shows its number pad. A real input sits
+     invisibly on top and holds the formatted time for screen readers. */
+  .time-entry {
+    position: relative; justify-self: start;
+    display: flex; align-items: center; min-height: var(--tap-min); padding: 0 var(--space-3);
+    border: var(--rule-width) solid var(--rule-strong); border-radius: var(--radius-s);
+    background: var(--surface);
+  }
+  .time-input { position: absolute; inset: 0; width: 100%; margin: 0; padding: 0; border: 0; opacity: 0; font-size: var(--text-16); cursor: text; }
+  /* Overpass's line box has more room below the baseline than above the figures, so plain
+     centring leaves the digits sitting high. text-box trims the line to the figures themselves
+     (cap height to baseline), and the flex centring then centres the digits. */
+  .time-display { font-size: var(--text-32); line-height: var(--leading-32); text-box: trim-both cap alphabetic; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+  .time-display .ghost { color: var(--ink-faint); }
+  /* The caret runs from just below the baseline to just above the figures and takes no width. */
+  .time-display .caret {
+    display: none; width: 0; height: calc(1cap + var(--space-2)); vertical-align: calc(var(--space-1) * -1);
+    border-left: var(--focus-width) solid var(--accent); margin: 0 calc(var(--focus-width) / -2);
+  }
+  .time-entry:has(.time-input:focus) .caret, .time-entry.is-focus .caret { display: inline-block; }
+  .time-entry:has(.time-input:focus-visible), .time-entry.is-focus { outline: var(--focus-width) solid var(--accent); outline-offset: var(--focus-offset); }
+  .field.has-error .time-entry { border-color: var(--danger); box-shadow: inset 0 0 0 var(--rule-width) var(--danger); }
+
+  .table-scroll { overflow-x: auto; margin-top: var(--space-5); }
+  table.results { width: 100%; border-collapse: collapse; font-size: var(--text-14); line-height: var(--leading-14); white-space: nowrap; }
+  .results th { text-align: right; font-weight: var(--weight-regular); color: var(--ink-muted); padding: var(--space-2) var(--space-1); border-bottom: var(--rule-width) solid var(--rule-strong); }
+  .results td { text-align: right; padding: var(--space-2) var(--space-1); border-bottom: var(--rule-width) solid var(--rule); font-variant-numeric: tabular-nums; }
+  .results th:nth-child(-n+2), .results td:nth-child(-n+2) { text-align: left; }
+  .results td:first-child { color: var(--ink-muted); width: 2rem; }
+  .results tr.total-strong td:last-child { font-weight: var(--weight-strong); }
+
+  .icons { display: flex; gap: var(--space-5); flex-wrap: wrap; }
+  .icon { display: grid; justify-items: center; gap: var(--space-1); font-size: var(--text-12); color: var(--ink-muted); }
+  .icon svg { width: var(--icon-24); height: var(--icon-24); color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="page">
+  <h1>Tri-Wrathlon timer: design tokens</h1>
+  <p class="muted">Draft for your approval. Every colour, size and space in the app comes from these values in <span class="num">tokens.css</span>. Nothing on this page is a real screen yet.</p>
+
+  <section aria-labelledby="who">
+    <h2 id="who">Who it's for</h2>
+    <ul class="plain">
+      <li><strong>Station volunteers</strong> use their own phones at the boathouse, the stadium entrance and the stadium exit. They work outdoors, often one-handed, for a few hours once a year, repeating one action fast. So the station screens have big targets, high contrast and as few steps per competitor as possible.</li>
+      <li><strong>You</strong> use a laptop at the boat club to start flights, fix entries and screenshot the results for the email. Those pages can be denser.</li>
+      <li><strong>No spectators.</strong> The results page is designed to screenshot cleanly at laptop width.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="colour">
+    <h2 id="colour">Colour</h2>
+    <p>One accent, Riverside blue, plus warm neutrals that look like a printed results sheet. Red is used only for errors. The ratios are contrast against the page background, worked out live on this page.</p>
+    <div class="pair">
+      <div class="theme-panel" data-theme="light"><h3>Light</h3><ul class="swatches" data-swatches></ul></div>
+      <div class="theme-panel" data-theme="dark"><h3>Dark</h3><ul class="swatches" data-swatches></ul></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="type">
+    <h2 id="type">Type</h2>
+    <p><strong>Overpass</strong> for everything. It's an open version of Highway Gothic, the lettering on the Storrow and Memorial Drive signs along the run, drawn to be read at a glance outdoors. Times and numbers use its tabular figures, so they line up in columns without a second, monospaced font. Two weights only, 400 and 600.</p>
+    <div class="type-row"><span class="label">48 / 400</span><span class="num" style="font-size:var(--text-48);line-height:var(--leading-48)">1:38:31.8</span></div>
+    <div class="type-row"><span class="label">32 / 400</span><span class="num" style="font-size:var(--text-32);line-height:var(--leading-32)">8:02:14.6</span></div>
+    <div class="type-row"><span class="label">24 / 600</span><span style="font-size:var(--text-24);line-height:var(--leading-24);font-weight:var(--weight-strong)">Stadium exit</span></div>
+    <div class="type-row"><span class="label">20 / 600</span><span style="font-size:var(--text-20);line-height:var(--leading-20);font-weight:var(--weight-strong)">8:10 flight started at 8:14:37</span></div>
+    <div class="type-row"><span class="label">16 / 400</span><span>Sam Carter, Jordan Hayes, Chris Walsh, Taylor Brooks</span></div>
+    <div class="type-row"><span class="label">14 / 400</span><span style="font-size:var(--text-14);line-height:var(--leading-14)">3 people still on the run. Tap a name to attach it to the oldest unnamed time.</span></div>
+    <div class="type-row"><span class="label">12 / 400</span><span style="font-size:var(--text-12);line-height:var(--leading-12)" class="muted">Saved on this phone, sending when there's signal</span></div>
+  </section>
+
+  <section aria-labelledby="space">
+    <h2 id="space">Spacing and radii</h2>
+    <p>Spacing comes in 4px steps. There are two radii: 4px for inputs and small buttons, and 10px for the big record button and dialogs. Nothing is pill-shaped. Only overlays get a shadow; rows and panels are separated by hairlines.</p>
+    <div data-spaces></div>
+    <div class="radii" style="margin-top:var(--space-5)">
+      <div class="radius-demo" style="border-radius:var(--radius-s)">radius-s 4</div>
+      <div class="radius-demo" style="border-radius:var(--radius-m)">radius-m 10</div>
+      <div class="radius-demo" style="border-radius:var(--radius-m);box-shadow:var(--shadow-overlay);border-color:var(--rule)">overlay only</div>
+    </div>
+  </section>
+
+  <section aria-labelledby="context">
+    <h2 id="context">In context</h2>
+    <p>The same pieces in both themes, using times from 2025 with made-up names. The numbers are placeholders too. This shows the tokens at work, not the screen layouts; those come in the mockups.</p>
+    <div class="pair">
+      <div class="theme-panel" data-theme="light" data-context></div>
+      <div class="theme-panel" data-theme="dark" data-context></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="motion">
+    <h2 id="motion">Motion and icons</h2>
+    <ul class="plain">
+      <li>Pressing scales to <span class="num">0.97</span> over <span class="num">100ms</span>. Try the record buttons above.</li>
+      <li>Interface transitions take <span class="num">160ms</span>. Overlays start at <span class="num">0.95</span> with a fade, never from zero.</li>
+      <li>Recording a finish, the action used most, doesn't animate beyond the press itself.</li>
+      <li>Hover styles apply only on devices with a real pointer. With reduced motion turned on, scaling goes and fades stay.</li>
+    </ul>
+    <p style="margin-top:var(--space-4)">Icons are Lucide at a 2px stroke, 20px in buttons and 24px on their own. They appear only where they add meaning.</p>
+    <div class="icons">
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>sent</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>waiting to send</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>search</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>start flight</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>undo</div>
+      <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>error</div>
+    </div>
+  </section>
+</main>
+
+<template id="context-template">
+  <h3 class="theme-name"></h3>
+  <div class="station-title"><strong>Stadium entrance</strong><span>8:10 flight on the run</span></div>
+  <button class="record" type="button"><span class="what">Record finish</span><span class="clock">8:02:14</span></button>
+  <div class="state-strip">
+    <div><button class="record is-pressed" type="button" tabindex="-1"><span class="what">Record</span><span class="clock">8:02:14</span></button><div class="state-caption">pressed</div></div>
+    <div><button class="record is-focus" type="button" tabindex="-1"><span class="what">Record</span><span class="clock">8:02:14</span></button><div class="state-caption">keyboard focus</div></div>
+    <div><button class="record" type="button" disabled><span class="what">Record</span><span class="clock">8:02:14</span></button><div class="state-caption">disabled</div></div>
+  </div>
+
+  <div class="stamp" style="margin-top:var(--space-5)">
+    <div><div class="t">8:01:57.3</div><div class="sub">Needs a name</div></div>
+    <button class="btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Add name</span></button>
+  </div>
+  <div class="person"><span class="no">14</span><span class="name">Chris Walsh</span><span class="flight">7:15</span></div>
+  <div class="person is-selected"><span class="no">22</span><span class="name">Riley Grant</span><span class="flight">7:15</span></div>
+  <div class="person"><span class="no">31</span><span class="name">Jesse Lane</span><span class="flight">8:10</span></div>
+
+  <div class="field" data-time data-demo="focus">
+    <label for="erg-empty">Erg time for Taylor Brooks</label>
+    <div class="time-entry"><input class="time-input" id="erg-empty" inputmode="numeric" autocomplete="off" enterkeyhint="done" aria-describedby="erg-empty-hint erg-empty-error" value=""><div class="time-display" aria-hidden="true"></div></div>
+    <span class="hint" id="erg-empty-hint">Type the digits only. The colon and decimal point fill in for you.</span>
+    <span class="error" id="erg-empty-error" hidden></span>
+  </div>
+  <div class="field" data-time>
+    <label for="erg-ok">Erg time for Jamie Lowe</label>
+    <div class="time-entry"><input class="time-input" id="erg-ok" inputmode="numeric" autocomplete="off" enterkeyhint="done" aria-describedby="erg-ok-hint erg-ok-error" value="38568"><div class="time-display" aria-hidden="true"></div></div>
+    <span class="hint" id="erg-ok-hint">Type the digits only. The colon and decimal point fill in for you.</span>
+    <span class="error" id="erg-ok-error" hidden></span>
+  </div>
+  <div class="field" data-time data-demo="check">
+    <label for="erg-bad">Erg time for Dana Price</label>
+    <div class="time-entry"><input class="time-input" id="erg-bad" inputmode="numeric" autocomplete="off" enterkeyhint="done" aria-describedby="erg-bad-hint erg-bad-error" value="381"><div class="time-display" aria-hidden="true"></div></div>
+    <span class="hint" id="erg-bad-hint">Type the digits only. The colon and decimal point fill in for you.</span>
+    <span class="error" id="erg-bad-error" hidden></span>
+  </div>
+
+  <div class="table-scroll"><table class="results">
+    <thead><tr><th>#</th><th>Name</th><th>Erg</th><th>Run</th><th>Stadium</th><th>Total</th></tr></thead>
+    <tbody>
+      <tr class="total-strong"><td>1</td><td>Sam Carter</td><td>35:26.7</td><td>39:19.5</td><td>23:45.6</td><td>1:38:31.8</td></tr>
+      <tr class="total-strong"><td>2</td><td>Jordan Hayes</td><td>36:31.2</td><td>41:44.8</td><td>20:39.7</td><td>1:38:55.7</td></tr>
+      <tr class="total-strong"><td>3</td><td>Chris Walsh</td><td>34:57.1</td><td>41:04.9</td><td>22:55.3</td><td>1:38:57.3</td></tr>
+    </tbody>
+  </table></div>
+</template>
+
+<script>
+  const tokens = [
+    ["--bg", "page"], ["--surface", "dialogs, inputs"], ["--ink", "text"], ["--ink-muted", "secondary text"],
+    ["--ink-faint", "disabled, ghost digits"], ["--rule", "hairlines"], ["--rule-strong", "input borders"],
+    ["--accent", "primary, focus"], ["--accent-pressed", "pressed"], ["--on-accent", "text on accent"],
+    ["--accent-tint", "selected row"], ["--danger", "errors only"], ["--danger-tint", "error background"],
+  ];
+  const lum = hex => {
+    const v = hex.replace("#", "").match(/../g).map(h => parseInt(h, 16) / 255)
+      .map(c => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+  };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+
+  document.querySelectorAll("[data-swatches]").forEach(list => {
+    const cs = getComputedStyle(list.closest(".theme-panel"));
+    const bg = cs.getPropertyValue("--bg").trim();
+    for (const [name, role] of tokens) {
+      const hex = cs.getPropertyValue(name).trim();
+      const li = document.createElement("li");
+      li.className = "swatch";
+      const against = name === "--on-accent" ? cs.getPropertyValue("--accent").trim() : bg;
+      const r = name === "--bg" ? "" : ratio(hex, against).toFixed(1) + ":1" + (name === "--on-accent" ? " on accent" : "");
+      li.innerHTML = `<span class="chip" style="background:${hex}"></span>
+        <span><span class="swatch-name">${name}</span><br><span class="swatch-role">${role}</span></span>
+        <span class="swatch-meta">${hex.toUpperCase()}<br>${r}</span>`;
+      list.append(li);
+    }
+  });
+
+  const spaces = document.querySelector("[data-spaces]");
+  for (let i = 1; i <= 8; i++) {
+    const row = document.createElement("div");
+    row.className = "space-row";
+    row.innerHTML = `<span class="num muted" style="font-size:var(--text-12)">space-${i}</span><span class="space-bar" style="width:var(--space-${i})"></span>`;
+    spaces.append(row);
+  }
+
+  const tpl = document.getElementById("context-template");
+  document.querySelectorAll("[data-context]").forEach((panel, i) => {
+    const node = tpl.content.cloneNode(true);
+    node.querySelector(".theme-name").textContent = panel.dataset.theme === "dark" ? "Dark" : "Light";
+    node.querySelectorAll("[id]").forEach(el => {
+      const id = el.id + "-" + i;
+      node.querySelector(`label[for="${el.id}"]`)?.setAttribute("for", id);
+      el.id = id;
+    });
+    node.querySelectorAll("[aria-describedby]").forEach(el => {
+      el.setAttribute("aria-describedby", el.getAttribute("aria-describedby").split(" ").map(ref => ref + "-" + i).join(" "));
+    });
+    panel.append(node);
+  });
+
+  // Time entry: digits in, formatted time out. Up to five digits fill mm:ss.t from the left;
+  // a sixth switches to h:mm:ss.t for anyone over an hour. Four digits are whole seconds:
+  // leaving the field fills the tenth with 0. (Over an hour, the tenth has to be typed,
+  // since five digits always read as mm:ss.t.)
+  const ALERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>';
+  const layoutFor = n => n > 5 ? "d:dd:dd.d" : "dd:dd.d";
+  const digitsIn = input => input.value.replace(/\D/g, "").slice(0, 6);
+  const format = d => {
+    let out = "", i = 0;
+    for (const ch of layoutFor(d.length)) { if (i >= d.length) break; out += ch === "d" ? d[i++] : ch; }
+    return out;
+  };
+  const problem = d => {
+    if (d.length < 4) return "That time is missing digits. Type at least the minutes and seconds from the monitor, like 3816 for 38:16.0.";
+    if (d.length === 4) d += "0";
+    const mm = d.length > 5 ? +d.slice(1, 3) : 0;
+    const ss = d.length > 5 ? +d.slice(3, 5) : +d.slice(2, 4);
+    if (ss > 59 || mm > 59) return "That isn't a time the monitor can show, because minutes and seconds stop at 59. Check the monitor and type it again.";
+    return null;
+  };
+  const paint = field => {
+    const input = field.querySelector(".time-input");
+    const display = field.querySelector(".time-display");
+    const d = digitsIn(input);
+    input.value = format(d);
+    display.replaceChildren();
+    let i = 0, next = null;
+    for (const ch of layoutFor(d.length)) {
+      const el = document.createElement("span");
+      if (ch !== "d") el.textContent = ch;
+      else if (i < d.length) el.textContent = d[i++];
+      else { el.textContent = "0"; el.className = "ghost"; next ??= el; i++; }
+      display.append(el);
+    }
+    const caret = document.createElement("span");
+    caret.className = "caret";
+    if (next) next.before(caret); else display.append(caret);
+  };
+  const showError = (field, msg) => {
+    const err = field.querySelector(".error");
+    field.classList.toggle("has-error", !!msg);
+    field.querySelector(".time-input").setAttribute("aria-invalid", msg ? "true" : "false");
+    field.querySelector(".hint").hidden = !!msg;
+    err.hidden = !msg;
+    err.innerHTML = msg ? ALERT + "<span></span>" : "";
+    if (msg) err.lastChild.textContent = msg;
+  };
+  const commit = field => {
+    const input = field.querySelector(".time-input");
+    const d = digitsIn(input);
+    if (d.length === 4) { input.value = d + "0"; paint(field); }
+    showError(field, d.length ? problem(d) : null);
+  };
+  document.querySelectorAll("[data-time]").forEach(field => {
+    const input = field.querySelector(".time-input");
+    const toEnd = () => input.setSelectionRange(input.value.length, input.value.length);
+    paint(field);
+    input.addEventListener("input", () => { paint(field); toEnd(); showError(field, null); });
+    input.addEventListener("keydown", e => { if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) e.preventDefault(); });
+    input.addEventListener("focus", () => {
+      document.querySelectorAll(".time-entry.is-focus").forEach(el => el.classList.remove("is-focus"));
+      requestAnimationFrame(toEnd);
+    });
+    input.addEventListener("pointerup", () => requestAnimationFrame(toEnd));
+    input.addEventListener("blur", () => commit(field));
+    if (field.dataset.demo === "focus") field.querySelector(".time-entry").classList.add("is-focus");
+    if (field.dataset.demo === "check") commit(field);
+  });
+</script>
+</body>
+</html>
