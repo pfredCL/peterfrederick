@@ -86,3 +86,35 @@ test("a keyboard press doesn't move a button; a pointer press shows it is presse
   expect(pressed).not.toBe(rest);
   expect(await app.evaluate(() => getComputedStyle(document.documentElement).webkitTapHighlightColor)).toBe("rgba(0, 0, 0, 0)");
 });
+
+test("the page is plain white, with the club crest beside the title", async ({ app }) => {
+  await app.goto("/index.html");
+  expect(await app.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe("rgb(255, 255, 255)");
+  const crest = app.locator(".topbar img.crest");
+  await expect(crest).toBeVisible();
+  await expect(crest).toHaveAttribute("alt", ""); // decorative: the title already names the race
+  expect(await crest.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+  expect((await crest.boundingBox()).height).toBe(32);
+});
+
+test("dark mode uses the white crest", async ({ app }) => {
+  await app.emulateMedia({ colorScheme: "dark" });
+  await app.goto("/index.html");
+  const crest = app.locator(".topbar img.crest");
+  await expect.poll(() => crest.evaluate((img) => img.currentSrc)).toMatch(/crest-white\.png$/);
+});
+
+test("station choices are just their names, and the PIN has no hint", async ({ app }) => {
+  await app.goto("/index.html");
+  await expect(app.locator(".choice")).toHaveText(["Erg", "Stadium entrance", "Stadium exit"]);
+  await expect(app.locator("#pin-hint")).toHaveCount(0);
+  await expect(app.locator("#pin")).toHaveAttribute("aria-describedby", "pin-error");
+});
+
+test("a chosen station is tinted, with no bar down its left edge", async ({ app }) => {
+  await app.goto("/index.html");
+  await app.getByText("Stadium entrance", { exact: true }).click();
+  const chosen = app.locator(".choice:has(input:checked)");
+  expect(await chosen.evaluate((el) => getComputedStyle(el).boxShadow)).toBe("none");
+  expect(await chosen.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgb(232, 237, 247)");
+});

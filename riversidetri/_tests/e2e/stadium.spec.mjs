@@ -88,6 +88,7 @@ test("the exit lists who is in the stadium, then anyone missed at the entrance",
   await signedIn.goto("/exit.html");
   await expect(signedIn.getByRole("heading", { name: "In the stadium" })).toBeVisible();
   await expect(signedIn.locator("#pool")).toContainText("Sam Carter");
+  await expect(signedIn.locator("#pool-count")).toHaveText("1"); // only Sam is in the stadium
   await expect(signedIn.getByText("Not recorded at the entrance")).toBeVisible();
   await expect(signedIn.locator("#pool")).toContainText("Blair Nolan");
 });
@@ -126,4 +127,12 @@ test("a name row darkens while pressed", async ({ signedIn }) => {
   const pressed = await row.evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(pressed).not.toBe(rest);
   await signedIn.mouse.up();
+});
+
+test("the time waiting for a name is tinted, with no bar down its left edge", async ({ signedIn }) => {
+  await signedIn.goto("/entrance.html");
+  await signedIn.getByRole("button", { name: "Record arrival" }).click();
+  const target = signedIn.locator(".stamp-item.is-target");
+  await expect(target).toBeVisible();
+  expect(await target.evaluate((el) => getComputedStyle(el).boxShadow)).toBe("none");
 });

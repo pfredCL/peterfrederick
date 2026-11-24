@@ -119,3 +119,43 @@ test("Fix on a stadium time with no start goes to the flight's button", async ({
   await signedIn.locator("#issues").getByRole("button", { name: "Fix" }).first().click();
   await expect(signedIn.getByRole("button", { name: "Start 8:10 flight" })).toBeFocused();
 });
+
+test("Everyone shows how long each person has been on their leg, and nothing for legs not run", async ({ signedIn, api }) => {
+  const ago = (min) => Date.now() - min * 60_000;
+  api.events.push(
+    started("7:15", 50),
+    started("8:10", 45),
+    event("erg", { competitor: "c0000004", value: "18167" }), // Blair: 30:16.7 on the erg, so 19 min on the run
+    event("erg", { competitor: "c0000001", value: "18000" }), // Dana: 30:00.0 on the erg
+    event("tap", { id: "in-1", station: "entrance", time: ago(3) }),
+    event("name", { target: "in-1", competitor: "c0000001" }), // Dana: 3 min in the stadium
+  );
+  await signedIn.goto("/organiser.html");
+  const cells = (name) => signedIn.locator("#everyone tr", { hasText: name }).locator("td");
+  // Columns: #, name, flight, status, erg, run, stadium, total
+  await expect(cells("Sam Carter").nth(4)).toHaveText("50 min");
+  await expect(cells("Blair Nolan").nth(5)).toHaveText("19 min");
+  await expect(cells("Dana Price").nth(6)).toHaveText("3 min");
+  await expect(cells("Jamie Lowe").nth(4)).toHaveText("45 min");
+  for (const name of ["Sam Carter", "Blair Nolan", "Dana Price", "Jamie Lowe"]) {
+    await expect(cells(name).nth(7)).toHaveText(""); // no total yet, and no dash
+  }
+  await expect(cells("Sam Carter").nth(5)).toHaveText("");
+  await expect(signedIn.locator("#everyone")).not.toContainText("–");
+});
+
+test("the organiser page keeps only the words that help", async ({ signedIn, api }) => {
+  const d = new Date();
+  d.setHours(7, 15, 0, 0);
+  api.events.push(event("start", { value: "7:15", time: d.getTime(), created: d.getTime() }));
+  await signedIn.goto("/organiser.html");
+  await expect(signedIn.locator("#flights")).toContainText("Started at 7:15:00");
+  await expect(signedIn.locator("#flights")).not.toContainText("Right on"); // said only when a start is off
+  // On its own, "Started at" keeps the main text style, not the small grey one of the note under it.
+  const startedAt = signedIn.locator("#flights .num");
+  expect(await startedAt.evaluate((el) => getComputedStyle(el).fontSize)).toBe("16px");
+  expect(await startedAt.evaluate((el) => getComputedStyle(el).color)).toBe("rgb(21, 23, 27)");
+  await expect(signedIn.locator("main")).not.toContainText("Start each flight when it actually starts rowing");
+  await expect(signedIn.locator("main")).not.toContainText("Click a name to fix a time.");
+  await expect(signedIn.locator("#issues")).toHaveText("Nothing needs attention.");
+});

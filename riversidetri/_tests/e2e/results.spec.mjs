@@ -37,3 +37,12 @@ test("before anyone finishes, it says so", async ({ signedIn }) => {
   await expect(signedIn.locator("#race-meta")).toHaveText("Saturday 5 December"); // no "0 finishers"
   await expect(signedIn.locator("#nontrad-block")).toBeHidden();
 });
+
+test("the results are narrow enough to screenshot for the email, with the crest beside the title", async ({ signedIn }) => {
+  await signedIn.goto("/results.html");
+  const width = await signedIn.locator(".desk-head").evaluate((el) => el.getBoundingClientRect().width);
+  expect(width).toBe(624);
+  const crest = signedIn.locator(".desk-head img.crest");
+  await expect(crest).toBeVisible();
+  expect((await crest.boundingBox()).height).toBe(56);
+});

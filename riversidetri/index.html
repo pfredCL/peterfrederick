@@ -16,21 +16,20 @@
 </head>
 <body>
 <div class="phone">
-  <header class="topbar"><h1 id="race-name">RBC Tri-Wrathlon</h1></header>
+  <header class="topbar"><picture><source srcset="img/crest-white.png" media="(prefers-color-scheme: dark)"><img class="crest" src="img/crest-blue.png" alt="" width="264" height="192"></picture><h1 id="race-name">RBC Tri-Wrathlon</h1></header>
   <main class="content">
     <form id="start" method="post" novalidate>
       <fieldset class="stations" id="stations">
         <legend class="page-title">Which station are you at?</legend>
         <div class="choices">
-          <label class="choice"><input type="radio" name="station" value="erg"><span class="radio"></span><span class="choice-text"><span class="choice-name">Erg</span><span class="choice-sub">In the boathouse. Type each rower's time from the monitor.</span></span></label>
-          <label class="choice"><input type="radio" name="station" value="entrance"><span class="radio"></span><span class="choice-text"><span class="choice-name">Stadium entrance</span><span class="choice-sub">Where the run ends. Tap as each runner comes in.</span></span></label>
-          <label class="choice"><input type="radio" name="station" value="exit"><span class="radio"></span><span class="choice-text"><span class="choice-name">Stadium exit</span><span class="choice-sub">The finish. Tap as each runner comes out.</span></span></label>
+          <label class="choice"><input type="radio" name="station" value="erg"><span class="radio"></span><span class="choice-text"><span class="choice-name">Erg</span></span></label>
+          <label class="choice"><input type="radio" name="station" value="entrance"><span class="radio"></span><span class="choice-text"><span class="choice-name">Stadium entrance</span></span></label>
+          <label class="choice"><input type="radio" name="station" value="exit"><span class="radio"></span><span class="choice-text"><span class="choice-name">Stadium exit</span></span></label>
         </div>
       </fieldset>
       <div class="field">
         <label for="pin">PIN</label>
-        <input class="text-input" id="pin" type="password" inputmode="numeric" autocomplete="off" aria-describedby="pin-hint pin-error">
-        <span class="hint" id="pin-hint">Ask the race organiser for it. You only need it once on this phone.</span>
+        <input class="text-input" id="pin" type="password" inputmode="numeric" autocomplete="off" aria-describedby="pin-error">
         <div id="pin-error-box" role="alert"><p class="row-error" id="pin-error" hidden></p></div>
       </div>
       <div class="after-form"><button class="button primary block" type="submit" id="open"><span>Open station</span></button></div>

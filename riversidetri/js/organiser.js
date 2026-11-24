@@ -109,7 +109,10 @@
       middle = "<span>Not started</span><span>" + UI.esc(Model.dueNote(f, store.correctedNow())) + "</span>";
       actions = '<button type="button" class="button primary" data-start="' + UI.esc(f.label) + '">' + UI.icon("flag") + "<span>Start " + UI.esc(f.label) + " flight</span></button>";
     } else {
-      middle = '<span class="num">Started at ' + Model.formatClock(f.start, false) + "</span><span>" + UI.esc(Model.startNote(f)) + "</span>";
+      // How far off the schedule it started, said only when it was off.
+      const note = Model.startNote(f);
+      middle = '<span class="num">Started at ' + Model.formatClock(f.start, false) + "</span>" +
+        (note.indexOf("Right on") === 0 ? "" : "<span>" + UI.esc(note) + "</span>");
       actions = '<button type="button" class="button" data-start-edit="' + UI.esc(f.label) + '"><span>Change start time</span></button>' +
         '<button type="button" class="link-button" data-undo="' + UI.esc(f.label) + '">Undo start</button>';
     }
@@ -118,7 +121,7 @@
   }
 
   function issuesHtml(v) {
-    if (!v.issues.length) return '<p class="empty">Nothing needs attention. Times without names, missing erg times and duplicates show up here.</p>';
+    if (!v.issues.length) return '<p class="empty">Nothing needs attention.</p>';
     return '<ul class="issues">' + v.issues.map((i) => "<li>" + UI.icon("alert", "icon-16") + "<span>" + UI.esc(i.text) + "</span>" +
       (i.competitor ? '<button type="button" class="link-button" data-fix-person="' + UI.esc(i.competitor) + '"' + (i.kind === "noStart" ? " data-fix-flight" : "") + ">Fix</button>"
         : i.station ? '<a href="' + encodeURIComponent(i.station) + '.html">Open the ' + UI.esc(Model.STATION_NAMES[i.station].toLowerCase()) + "</a>" : "") +
@@ -126,14 +129,23 @@
   }
 
   function everyoneHtml(v) {
-    const t = (x) => (x === null ? '<span class="pending">–</span>' : Model.formatTenths(x));
+    // A leg not run yet is blank, except the leg someone is on: whole minutes on it so far.
+    const now = store.correctedNow();
+    const legFrom = (p) => p.status === "On the erg" ? { col: "erg", from: p.start }
+      : p.status === "On the run" ? { col: "run", from: p.start + p.erg * 100 }
+      : p.status === "In the stadium" ? { col: "stadium", from: p.arrival } : null;
+    const t = (p, col) => {
+      if (p[col] !== null) return Model.formatTenths(p[col]);
+      const leg = legFrom(p);
+      return leg && leg.col === col ? '<span class="pending">' + Math.max(0, Math.floor((now - leg.from) / 60000)) + " min</span>" : "";
+    };
     const order = (p) => (p.flightMinutes === null ? 9999 : p.flightMinutes);
     const people = v.people.slice().sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name));
     if (!people.length) return '<tr><td class="l" colspan="8">' + UI.emptyRoster() + "</td></tr>";
     return people.map((p) => "<tr" + (editing === p.id ? ' class="is-open"' : "") + '><td class="rank">' + UI.num(p) + '</td><td class="l">' +
       '<button type="button" class="name-button" data-edit="' + UI.esc(p.id) + '" aria-expanded="' + (editing === p.id) + '">' + UI.esc(p.name) + (p.nontrad ? "*" : "") +
-      '</button></td><td class="l">' + UI.esc(p.flight || "–") + '</td><td class="l">' + UI.esc(p.status) + "</td><td>" + t(p.erg) + "</td><td>" + t(p.run) +
-      "</td><td>" + t(p.stadium) + '</td><td class="strong">' + t(p.total) + "</td></tr>" + (editing === p.id ? editHtml(p) : "")).join("");
+      '</button></td><td class="l">' + UI.esc(p.flight || "–") + '</td><td class="l">' + UI.esc(p.status) + "</td><td>" + t(p, "erg") + "</td><td>" + t(p, "run") +
+      "</td><td>" + t(p, "stadium") + '</td><td class="strong">' + t(p, "total") + "</td></tr>" + (editing === p.id ? editHtml(p) : "")).join("");
   }
 
   function editHtml(p) {

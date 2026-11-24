@@ -123,3 +123,11 @@ test("a one-person flight says 'All 1 time ... is in.'", async ({ signedIn, api 
   api.events = api.events.filter((e) => e.competitor !== "c0000004");
   await expect(signedIn.locator("#erg-status")).toHaveText("All 1 time from the 7:15 flight is in.");
 });
+
+test("the open row is tinted, with no bar down its left edge", async ({ signedIn }) => {
+  await signedIn.goto("/erg.html");
+  await signedIn.getByRole("button", { name: /Dana Price/ }).click();
+  const open = signedIn.locator(".row.is-open");
+  await expect(open).toBeVisible();
+  expect(await open.evaluate((el) => getComputedStyle(el).boxShadow)).toBe("none");
+});

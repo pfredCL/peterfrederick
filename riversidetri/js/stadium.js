@@ -133,7 +133,8 @@
   function renderPool(v, tgt) {
     if (!v.people.length) { $("pool-count").textContent = ""; UI.setHtml($("pool"), UI.emptyRoster()); return; }
     const c = Model.nameCandidates(v, station);
-    const count = c.main.concat(c.extra).reduce((n, g) => n + g.people.length, 0);
+    // The count is the heading's: on the run, or in the stadium. Those missed at the entrance are listed under it, not counted.
+    const count = c.main.reduce((n, g) => n + g.people.length, 0);
     $("pool-count").textContent = count ? String(count) : "";
     const filter = (groups) => groups
       .map((g) => Object.assign({}, g, { people: g.people.filter((p) => UI.matches(p, query)) }))

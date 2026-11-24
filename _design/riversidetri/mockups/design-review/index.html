@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Tri-Wrathlon design review mock-up</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;600&family=Barlow+Semi+Condensed:wght@400;600&family=Big+Shoulders+Text:wght@400;600&family=B612+Mono&family=Saira+Semi+Condensed:wght@400;600&display=swap">
+<style>
+  @font-face { font-family: "Overpass"; font-weight: 400; src: url(/riversidetri/fonts/overpass-latin-400-normal.woff2) format("woff2"); }
+  @font-face { font-family: "Overpass"; font-weight: 600; src: url(/riversidetri/fonts/overpass-latin-600-normal.woff2) format("woff2"); }
+  * { box-sizing: border-box; margin: 0; }
+  body { font: 16px/1.5 "Overpass", system-ui, sans-serif; color: #15171B; background: #ECEEF1; }
+  .layout { display: grid; grid-template-columns: 20rem 1fr; min-height: 100vh; }
+  aside { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: #FFFFFF; border-right: 1px solid #D5D8DE; padding: 24px 20px 48px; }
+  h1 { font-size: 20px; line-height: 28px; font-weight: 600; }
+  .intro { margin-top: 8px; font-size: 14px; line-height: 20px; color: #5A5F69; }
+  .presets { display: flex; gap: 8px; margin-top: 16px; }
+  .group { margin-top: 24px; }
+  .group h2 { font-size: 14px; line-height: 20px; font-weight: 600; }
+  .options { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  button { font: inherit; font-size: 14px; line-height: 20px; color: inherit; cursor: pointer; }
+  .options button, .presets button { padding: 6px 10px; border: 1px solid #C4C8CF; border-radius: 4px; background: #FFFFFF; }
+  .options button[aria-pressed="true"] { background: #284DA6; border-color: #284DA6; color: #FFFFFF; }
+  .options button:focus-visible, .presets button:focus-visible { outline: 2px solid #284DA6; outline-offset: 2px; }
+  .note { margin-top: 8px; font-size: 14px; line-height: 20px; color: #5A5F69; }
+  .note:empty { display: none; }
+  main { padding: 24px 32px 64px; min-width: 0; }
+  section + section { margin-top: 48px; }
+  main h2 { font-size: 20px; line-height: 28px; font-weight: 600; }
+  .phones { display: flex; flex-wrap: wrap; gap: 24px; margin-top: 16px; }
+  figure { margin: 0; }
+  figcaption { font-size: 14px; line-height: 20px; color: #5A5F69; margin-bottom: 8px; }
+  .frame { position: relative; overflow: hidden; background: #FFFFFF; border: 1px solid #C4C8CF; border-radius: 4px; }
+  .frame iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; }
+  .laptops figure + figure { margin-top: 32px; }
+  .laptops { margin-top: 16px; }
+  table.spec { margin-top: 16px; border-collapse: collapse; width: 100%; background: #FFFFFF; border: 1px solid #D5D8DE; }
+  .spec td { padding: 12px 16px; border-top: 1px solid #E3E5E9; vertical-align: middle; white-space: nowrap; }
+  .spec tr { cursor: pointer; }
+  .spec tr[aria-selected="true"] td { background: #E8EDF7; }
+  .spec .who { white-space: normal; width: 16rem; font-size: 14px; line-height: 20px; color: #5A5F69; }
+  .spec .who b { display: block; font-weight: 600; color: #15171B; font-size: 16px; line-height: 24px; }
+  .spec .t { font-variant-numeric: tabular-nums; text-align: right; }
+  .spec .t16 { font-size: 16px; } .spec .t20 { font-size: 20px; } .spec .t32 { font-size: 32px; line-height: 40px; }
+  .spec .strong { font-weight: 600; }
+  .spec .lbl { font-size: 12px; line-height: 16px; color: #5A5F69; display: block; text-align: right; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } aside { position: static; height: auto; border-right: 0; border-bottom: 1px solid #D5D8DE; } main { padding: 24px 16px; } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside>
+    <h1>Design review mock-up</h1>
+    <p class="intro">The real pages with the demo race at 8:57 on race morning. Each switch changes every page at once. Nothing here is built into the site.</p>
+    <div class="presets">
+      <button type="button" data-preset="today">All as it is today</button>
+      <button type="button" data-preset="agreed">What you've agreed</button>
+    </div>
+    <div id="groups"></div>
+  </aside>
+  <main>
+    <section>
+      <h2>Phones</h2>
+      <div class="phones" id="phones"></div>
+    </section>
+    <section>
+      <h2>Times, side by side</h2>
+      <p class="note">The same times in each typeface, at the sizes the site uses: a results row, a stadium time and the clock on the record button. Click one to try it on the pages.</p>
+      <table class="spec" id="spec"></table>
+    </section>
+    <section>
+      <h2>Laptop</h2>
+      <div class="laptops" id="laptops"></div>
+    </section>
+  </main>
+</div>
+<script>
+  const GROUPS = [
+    { key: "bg", label: "Page colour", options: [
+      ["paper", "Paper (today)", "The warm off-white approved in November."],
+      ["online", "Online", "Plain white, or a neutral dark, and the accent becomes the crest's blue. 13 colour values in each theme, no added weight, every page."],
+    ] },
+    { key: "theme", label: "Light or dark", options: [["light", "Light", ""], ["dark", "Dark", "How it looks on a phone set to dark."]] },
+    { key: "crest", label: "Crest", options: [
+      ["none", "None (today)", ""],
+      ["beside", "Beside the title", "32px on phones, 56px on laptops, next to the page title (in white on dark). One 7 KB image, plus a 4 KB white one for dark, on all 6 pages."],
+      ["header", "Blue header", "The header in the crest's blue, with the crest and title in white, across the full width. One 4 KB image, on all 6 pages."],
+    ] },
+    { key: "help", label: "Helper text", options: [
+      ["today", "As today", ""],
+      ["trimmed", "Trimmed", "Takes out 9 sentences. Start page: the three station descriptions and the PIN hint. Organiser: the two section hints, both “Right on…” notes and the second sentence of “Nothing needs attention”. Wording only."],
+    ] },
+    { key: "bar", label: "Selected rows", options: [
+      ["bar", "Blue bar (today)", ""],
+      ["tint", "Tint only", "The time waiting for a name, the chosen station and the open erg row keep their tint; the bar goes. 3 style rules."],
+    ] },
+    { key: "empty", label: "Empty times (organiser)", options: [
+      ["dash", "Dashes (today)", "54 of the 96 time cells in this race are dashes."],
+      ["blank", "Blank", "Times not run yet are left empty. 1 line of code."],
+      ["live", "Leg in progress", "Empty, except the leg each person is on shows how long they've been on it. About 10 lines of code."],
+    ] },
+    { key: "times", label: "Times typeface", options: [
+      ["overpass", "Overpass (today)", "The road-sign face the rest of the site uses. Nothing added."],
+      ["overpass-mono", "Overpass Mono", "The same road-sign lettering with every character the same width, so times line up like a printout. 22 KB, one file for both weights."],
+      ["barlow", "Barlow Semi Condensed", "Drawn from California's highway signs and number plates: narrower, sportier figures that sit well beside Overpass. 45 KB for two weights."],
+      ["big-shoulders", "Big Shoulders Text", "Made for Chicago's city signage: tall, condensed figures, like a scoreboard. 36 KB, one file for both weights."],
+      ["b612", "B612 Mono", "Made for aircraft cockpit screens, to be read at a glance. Regular only, so totals can't be semibold. 19 KB."],
+      ["saira", "Saira Semi Condensed", "Squared-off, open figures that read like a digital race clock. 36 KB for two weights."],
+    ] },
+    { key: "results", label: "Results width", options: [
+      ["today", "As today", "The tables are 976px wide."],
+      ["narrow", "Narrower", "The tables are 624px wide, so the screenshot for the email has no gap between names and times. 2 style values, results page only."],
+    ] },
+  ];
+  const TODAY = { bg: "paper", theme: "light", crest: "none", help: "today", bar: "bar", empty: "dash", times: "overpass", results: "today" };
+  const AGREED = { bg: "online", help: "trimmed", bar: "tint", empty: "live", results: "narrow" };
+  const state = Object.assign({}, TODAY, JSON.parse(decodeURIComponent(location.hash.slice(1)) || "{}"));
+
+  const PHONES = [["start", "Start, a station chosen"], ["erg", "Erg, typing a time"], ["entrance", "Stadium entrance"], ["exit", "Stadium exit"]];
+  const LAPTOPS = [["organiser", "Organiser"], ["results", "Results"]];
+  const frames = [];
+
+  function frame(file, w, h) {
+    const box = document.createElement("div");
+    box.className = "frame";
+    const f = document.createElement("iframe");
+    f.src = file + ".html";
+    f.width = w;
+    f.height = h;
+    f.title = file;
+    box.appendChild(f);
+    const item = { box, f, w, h, laptop: h === null };
+    f.addEventListener("load", () => { apply(item); size(item); });
+    frames.push(item);
+    return box;
+  }
+  function figure(parent, caption, box) {
+    const fig = document.createElement("figure");
+    fig.innerHTML = "<figcaption>" + caption + "</figcaption>";
+    fig.appendChild(box);
+    parent.appendChild(fig);
+  }
+  PHONES.forEach(([file, caption]) => figure(document.getElementById("phones"), caption, frame(file, 375, 812)));
+  LAPTOPS.forEach(([file, caption]) => figure(document.getElementById("laptops"), caption, frame(file, 1280, null)));
+
+  function size(item) {
+    const doc = item.f.contentDocument;
+    if (!doc || !doc.documentElement) return;
+    const scale = item.laptop ? Math.min(1, item.box.parentElement.clientWidth / item.w) : 0.8;
+    const h = item.laptop ? doc.documentElement.scrollHeight : item.h;
+    item.f.style.height = h + "px";
+    item.f.style.transform = "scale(" + scale + ")";
+    item.box.style.width = item.w * scale + "px";
+    item.box.style.height = h * scale + "px";
+  }
+  function apply(item) {
+    const doc = item.f.contentDocument;
+    if (!doc || !doc.documentElement) return;
+    const el = doc.documentElement;
+    el.setAttribute("data-theme", state.theme);
+    GROUPS.forEach((g) => { if (g.key !== "theme") el.setAttribute("data-" + g.key, state[g.key]); });
+    if (item.laptop) setTimeout(() => size(item), 150);
+  }
+
+  const groupsEl = document.getElementById("groups");
+  GROUPS.forEach((g) => {
+    const div = document.createElement("div");
+    div.className = "group";
+    div.innerHTML = "<h2>" + g.label + '</h2><div class="options">' +
+      g.options.map(([v, label]) => '<button type="button" data-key="' + g.key + '" data-value="' + v + '">' + label + "</button>").join("") +
+      '</div><p class="note" id="note-' + g.key + '"></p>';
+    groupsEl.appendChild(div);
+  });
+
+  const SPEC = { erg: "31:12.4", run: "29:40.0", stadium: "22:05.0", total: "1:22:57.4", stamp: "8:56:40.0", clock: "8:57:05" };
+  const FAMILY = { "overpass": "Overpass", "overpass-mono": "Overpass Mono", "barlow": "Barlow Semi Condensed", "big-shoulders": "Big Shoulders Text", "b612": "B612 Mono", "saira": "Saira Semi Condensed" };
+  const timesGroup = GROUPS.find((g) => g.key === "times");
+  document.getElementById("spec").innerHTML = timesGroup.options.map(([v, label, note]) => {
+    const ff = ' style="font-family: \'' + FAMILY[v] + '\', Overpass, sans-serif"';
+    const strong = v === "b612" ? "" : " strong";
+    return '<tr data-value="' + v + '"><td class="who"><b>' + label + "</b>" + note.replace(/\. [^.]*KB.*$/, ".") + "</td>" +
+      ["erg", "run", "stadium"].map((k) => '<td class="t t16"' + ff + '><span class="lbl">' + k[0].toUpperCase() + k.slice(1) + "</span>" + SPEC[k] + "</td>").join("") +
+      '<td class="t t16' + strong + '"' + ff + '><span class="lbl">Total</span>' + SPEC.total + "</td>" +
+      '<td class="t t20"' + ff + '><span class="lbl">Stadium time</span>' + SPEC.stamp + "</td>" +
+      '<td class="t t32"' + ff + '><span class="lbl">Record clock</span>' + SPEC.clock + "</td></tr>";
+  }).join("");
+
+  function render() {
+    document.querySelectorAll(".options button").forEach((b) => b.setAttribute("aria-pressed", String(state[b.dataset.key] === b.dataset.value)));
+    GROUPS.forEach((g) => { document.getElementById("note-" + g.key).textContent = g.options.find((o) => o[0] === state[g.key])[2]; });
+    document.querySelectorAll("#spec tr").forEach((tr) => tr.setAttribute("aria-selected", String(tr.dataset.value === state.times)));
+    frames.forEach(apply);
+    history.replaceState(null, "", "#" + encodeURIComponent(JSON.stringify(state)));
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".options button");
+    if (b) { state[b.dataset.key] = b.dataset.value; render(); return; }
+    const p = e.target.closest("[data-preset]");
+    if (p) { Object.assign(state, p.dataset.preset === "today" ? TODAY : AGREED); render(); return; }
+    const tr = e.target.closest("#spec tr");
+    if (tr) { state.times = tr.dataset.value; render(); }
+  });
+  window.addEventListener("resize", () => frames.forEach(size));
+  render();
+</script>
+</body>
+</html>

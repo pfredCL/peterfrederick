@@ -249,7 +249,7 @@ Wrong PIN: "That PIN didn't work. Check it with the race organiser."
   times without names for over 2 minutes; a competitor named on two taps at one station; erg time missing
   for someone who has arrived; implausible splits (section 8); Competitors rows with a missing name, a
   repeated number or an unreadable flight; events for a deleted competitor. Empty state: "Nothing needs
-  attention. Times without names, missing erg times and duplicates show up here."
+  attention."
 - **Everyone**: number, name, flight, status (Not started, On the erg, On the run, In the stadium,
   Finished), erg, run, stadium, total. Clicking a row opens it in place to correct the erg time, change or
   remove the arrival or finish name, or delete a time.
@@ -285,8 +285,8 @@ On the server: event shape only (section 5).
 
 ## 9. Design rules (from the brief)
 
-- Components use tokens only. One accent (Riverside blue) on warm neutrals, light and dark (dark follows the
-  phone). Overpass at 400 and 600 only, tabular figures for every number. Nothing under 12px.
+- Components use tokens only. One accent (the crest's blue) on white and neutral greys, light and dark (dark
+  follows the phone). Overpass at 400 and 600 only, tabular figures for every number. Nothing under 12px.
 - Text in boxes is trimmed (`text-box: trim-both cap alphabetic`) so it centres; native inputs use
   `--input-nudge`. Firefox doesn't support the trim yet and shows text about 3px high: accepted.
 - Lucide icons at a 2px stroke, 16/20/24px. No emoji, illustrations, gradients, glass, pill badges,
@@ -294,6 +294,33 @@ On the server: event shape only (section 5).
 - Motion: presses 100 ms at 0.97; other transitions 160 ms; overlays from 0.95 with a fade; hover styles only
   for a fine pointer; reduced motion keeps fades and drops movement; keyboard actions never animate.
 - Errors are one plain sentence saying what happened and what to do.
+
+### Decisions, 24 November 2026 (after the design review)
+
+These replace the "warm neutrals" and "printed-results paper" above. Chosen from the review mock-up
+(`mockups/design-review/`), which shows each option next to how it was before.
+
+- **Online race results, not printed paper.** Light: page `#FFFFFF`, ink `#15171B`, rules `#E3E5E9`, and the
+  accent is the crest's blue `#284DA6`. Dark: a neutral `#111318` with accent `#8FAEEB`. All values are in
+  `riversidetri/css/tokens.css`, which is now the source of truth (the copy in this folder is the November one).
+- **The club crest sits beside the title** on every page: 32px tall on phones, 56px on laptops; the white
+  version in dark mode. It is decorative (the title says the name), so it has empty alt text.
+- **Less helper text.** Gone: the three station descriptions and the PIN hint on the start page; the two
+  section hints on the organiser page ("Start each flight when…", "Click a name to fix a time."); the
+  "Right on 7:15" note when a flight starts on time (a late or early start still says how far off it was);
+  the second sentence of the empty Needs attention ("Nothing needs attention." stays). Kept: "Tap who it was",
+  "Record a time first, then tap who it was." and the hint under the erg time field.
+- **No accent bar down the left edge** of the open erg row, the chosen station or the time waiting for a
+  name. They keep the tint.
+- **Leg in progress instead of dashes** in the Everyone table: a time not run yet is blank, except the leg
+  each person is on, which shows whole minutes on it so far ("22 min"): on the erg since the flight's start,
+  on the run since the end of their erg, in the stadium since their arrival.
+- **Times stay in Overpass.** Overpass Mono, Barlow Semi Condensed, Big Shoulders Text, B612 Mono and Saira
+  Semi Condensed were shown and not chosen.
+- **The results page is narrower:** 42rem including its padding, so the tables are 624px wide and the
+  emailed screenshot has no gap between names and times.
+- **The stadium exit's count is the people in the stadium only**, not those listed under "Not recorded at the
+  entrance".
 
 ## 10. Testing
 

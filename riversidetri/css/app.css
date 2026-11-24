@@ -34,10 +34,15 @@ button, input { font: inherit; color: inherit; }
 /* ---------- Phone shell ---------- */
 .phone { max-width: var(--measure-phone); margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; }
 .topbar {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  display: flex; align-items: center; gap: var(--space-3);
   min-height: var(--space-8); padding: 0 var(--space-4); border-bottom: var(--rule-width) solid var(--rule);
 }
 .topbar h1 { font-size: var(--text-20); line-height: var(--leading-20); font-weight: var(--weight-strong); }
+.topbar .sync { margin-left: auto; }
+/* The club crest beside the title: blue, or white when the phone is set to dark. */
+:is(.topbar, .desk-head) picture { display: flex; flex: none; }
+.crest { width: auto; height: var(--crest-phone); }
+.desk-head .crest { height: var(--crest-laptop); }
 .sync { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); white-space: nowrap; }
 .sync.is-waiting, .sync.is-failing { color: var(--ink); }
 .sync.is-failing .icon-16 { color: var(--danger); }
@@ -89,7 +94,7 @@ button.row:active:not(:disabled) { background: var(--rule); }
 
 /* A row opened in place for input: an erg time, or fixing a stadium time. */
 .row.is-open {
-  background: var(--accent-tint); box-shadow: inset var(--mark-width) 0 0 var(--accent);
+  background: var(--accent-tint);
   row-gap: var(--space-3); padding-right: var(--space-3); padding-bottom: var(--space-4);
 }
 .row.is-open > .row-entry, .row.is-open > .row-hint, .row.is-open > .row-error,
@@ -107,7 +112,7 @@ button.row:active:not(:disabled) { background: var(--rule); }
 .stamp-item { display: flex; align-items: center; gap: var(--space-3); border-bottom: var(--rule-width) solid var(--rule); }
 .stamp-item .row { flex: 1; grid-template-columns: 1fr auto; border-bottom: 0; padding-left: var(--space-3); padding-right: var(--space-3); }
 .stamp-item .row > .time { font-size: var(--text-20); line-height: var(--leading-20); color: var(--ink); }
-.stamp-item.is-target { background: var(--accent-tint); box-shadow: inset var(--mark-width) 0 0 var(--accent); }
+.stamp-item.is-target { background: var(--accent-tint); }
 .stamp-item.is-target .aside-col { color: var(--ink); }
 .stamp-item > .link-button { padding: 0 var(--space-3); }
 .stamp-item > .confirm { flex: 1; padding: var(--space-3); }
@@ -164,7 +169,6 @@ button.row:active:not(:disabled) { background: var(--rule); }
 /* ---------- Fields ---------- */
 .field { display: grid; gap: var(--space-2); margin-top: var(--space-5); }
 .field label { font-size: var(--text-14); line-height: var(--leading-14); }
-.field .hint { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
 .text-input {
   width: 100%; min-height: var(--tap-min); padding: var(--input-nudge) var(--space-3) 0;
   border: var(--rule-width) solid var(--rule-strong); border-radius: var(--radius-s);
@@ -204,19 +208,21 @@ button.row:active:not(:disabled) { background: var(--rule); }
 .choice input:focus-visible { outline: none; }
 .choice-text { display: grid; gap: var(--space-2); }
 .choice-name { font-weight: var(--weight-strong); }
-.choice-sub { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
 .radio { width: var(--icon-20); height: var(--icon-20); border-radius: 50%; border: var(--focus-width) solid var(--rule-strong); background: var(--surface); }
-.choice:has(input:checked) { background: var(--accent-tint); box-shadow: inset var(--mark-width) 0 0 var(--accent); }
+.choice:has(input:checked) { background: var(--accent-tint); }
 .choice:has(input:checked) .radio { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 var(--space-1) var(--surface); }
 .choice:has(input:focus-visible) { outline: var(--focus-width) solid var(--accent); outline-offset: calc(var(--focus-width) * -1); }
 .choice:active, .choice:active:has(input:checked) { background: var(--rule); }
 
 /* ---------- Laptop pages ---------- */
 .desk { max-width: var(--measure-laptop); margin: 0 auto; padding: var(--space-6) var(--space-5) var(--space-8); }
+/* Results are screenshotted for the email: narrow, so there's no gap between names and times. */
+.desk-results { max-width: var(--measure-results); }
 .desk-head {
-  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-3) var(--space-5);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5);
   padding-bottom: var(--space-4); border-bottom: var(--rule-width) solid var(--rule-strong);
 }
+.desk-head > div:first-of-type { margin-right: auto; }
 .desk-head h1 { font-size: var(--text-24); line-height: var(--leading-24); font-weight: var(--weight-strong); }
 .desk-head p { margin-top: var(--space-2); }
 .desk-head .meta { display: flex; align-items: baseline; gap: var(--space-5); }
@@ -237,7 +243,8 @@ button.row:active:not(:disabled) { background: var(--rule); }
 }
 .flight h3 { font-size: var(--text-20); line-height: var(--leading-20); font-weight: var(--weight-strong); }
 .flight .stack { display: grid; gap: var(--space-1); }
-.flight .stack > span:last-child { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
+/* Each line after the first is a note: smaller and grey. */
+.flight .stack > span:not(:first-child) { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
 .flight .actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-4); }
 @media (max-width: 40rem) {
   .flight { grid-template-columns: 1fr; gap: var(--space-3); }
@@ -269,7 +276,7 @@ table.data { width: 100%; border-collapse: collapse; white-space: nowrap; }
 /* Results tables share fixed column widths so the two tables line up. */
 .data.fixed { table-layout: fixed; }
 .data.fixed th:first-child { width: var(--space-7); }
-.data.fixed th:nth-child(n+3) { width: calc(var(--space-8) * 2); }
+.data.fixed th:nth-child(n+3) { width: var(--col-time); }
 .name-button { padding: 0; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .name-button:hover { text-decoration: underline; text-underline-offset: var(--space-1); } }
 tr.is-open td, tr.edit-row td { background: var(--accent-tint); }

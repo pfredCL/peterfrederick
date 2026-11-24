@@ -1,0 +1,92 @@
+/* Design review switches. Each snapshot page loads this after the real tokens.css and app.css.
+   The mock-up page sets data-* attributes on each snapshot's <html>; with none set, the page is as it is today. */
+
+:root {
+  --club: #284DA6;          /* the crest's blue, sampled from the crest */
+  --on-club: #FFFFFF;       /* 7.8:1 on club */
+  --on-club-muted: #C9D4EE; /* 5.2:1 on club */
+}
+
+/* ---------- Page colour: online (plain white, neutral dark) ---------- */
+html[data-bg="online"][data-theme="light"] {
+  --bg: #FFFFFF;
+  --surface: #F5F6F8;
+  --ink: #15171B;           /* 18:1 */
+  --ink-muted: #5A5F69;     /* 6.4:1 */
+  --ink-faint: #8C919A;
+  --rule: #E3E5E9;
+  --rule-strong: #8A909A;   /* 3.2:1 */
+  --accent: #284DA6;        /* the crest's blue, 7.8:1 */
+  --accent-pressed: #1F3D86;
+  --on-accent: #FFFFFF;
+  --accent-tint: #E8EDF7;
+  --danger: #B42318;
+  --danger-tint: #FCE9E7;
+}
+html[data-bg="online"][data-theme="dark"] {
+  --bg: #111318;
+  --surface: #1A1D23;
+  --ink: #ECEEF2;           /* 16:1 */
+  --ink-muted: #A2A7B1;     /* 7.7:1 */
+  --ink-faint: #6B707A;
+  --rule: #272B32;
+  --rule-strong: #6E747F;   /* 3.9:1 */
+  --accent: #8FAEEB;        /* 8.3:1 */
+  --accent-pressed: #AAC2F1;
+  --on-accent: #0B1630;
+  --accent-tint: #1B2640;
+  --danger: #F2907F;
+  --danger-tint: #3A1F1A;
+}
+
+/* ---------- Crest ---------- */
+.rv-crest { display: none; flex: none; width: auto; }
+.topbar .rv-crest { height: 2rem; }
+.desk-head .rv-crest { height: 3.5rem; }
+html[data-crest="beside"][data-theme="light"] .rv-crest-blue,
+html[data-crest="beside"][data-theme="dark"] .rv-crest-white,
+html[data-crest="header"] .rv-crest-white { display: block; }
+html:is([data-crest="beside"], [data-crest="header"]) .topbar { justify-content: flex-start; }
+html:is([data-crest="beside"], [data-crest="header"]) .topbar .sync { margin-left: auto; }
+html:is([data-crest="beside"], [data-crest="header"]) .desk-head { align-items: center; justify-content: flex-start; }
+html:is([data-crest="beside"], [data-crest="header"]) .desk-head > div:first-of-type { margin-right: auto; }
+
+/* Blue header: the crest in white on the club's blue, across the full width. */
+html[data-crest="header"] .topbar { background: var(--club); color: var(--on-club); border-bottom-color: var(--club); }
+html[data-crest="header"] .topbar .sync { color: var(--on-club-muted); }
+html[data-crest="header"] .desk-head {
+  background: var(--club); color: var(--on-club); border-bottom: 0;
+  box-shadow: 0 0 0 100vmax var(--club); clip-path: inset(0 -100vmax);
+  margin-top: calc(var(--space-6) * -1); padding-top: var(--space-5); padding-bottom: var(--space-5);
+}
+html[data-crest="header"] .desk-head :is(.muted, .sync, .nav a) { color: var(--on-club-muted); }
+html[data-crest="header"] .desk-head .nav a[aria-current="page"] { color: var(--on-club); text-decoration-color: var(--on-club); }
+
+/* ---------- Helper text ---------- */
+html[data-help="trimmed"] .rv-help { display: none; }
+
+/* ---------- Selected rows: tint only, no bar down the left edge ---------- */
+html[data-bar="tint"] :is(.row.is-open, .stamp-item.is-target, .choice:has(input:checked)) { box-shadow: none; }
+
+/* ---------- Empty times on the organiser page ---------- */
+.rv-live { display: none; }
+html[data-empty="blank"] .rv-dash,
+html[data-empty="live"] .rv-dash { display: none; }
+html[data-empty="live"] .rv-live { display: inline; }
+
+/* ---------- Times typeface ---------- */
+html[data-times="overpass-mono"] { --font-times: "Overpass Mono"; }
+html[data-times="barlow"] { --font-times: "Barlow Semi Condensed"; }
+html[data-times="big-shoulders"] { --font-times: "Big Shoulders Text"; }
+html[data-times="b612"] { --font-times: "B612 Mono"; }
+html[data-times="saira"] { --font-times: "Saira Semi Condensed"; }
+html[data-times]:not([data-times="overpass"]) :is(.time, .clock, .time-display, .data td:not(.l):not(.rank)) {
+  font-family: var(--font-times), var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+/* B612 Mono has no 600; the weight rule rules out its 700, so its totals stay regular. */
+html[data-times="b612"] .data td.strong { font-weight: var(--weight-regular); }
+
+/* ---------- Results page width ---------- */
+html[data-results="narrow"] .desk:has(#overall) { max-width: 42rem; }
+html[data-results="narrow"] .desk:has(#overall) .data.fixed th:nth-child(n+3) { width: 6.5rem; }

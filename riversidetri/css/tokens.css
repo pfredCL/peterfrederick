@@ -39,11 +39,14 @@
 
   /* Lines and sizes */
   --rule-width: 1px;
-  --mark-width: 3px;        /* the accent bar on a selected row */
   --tap-min: 3rem;          /* 48px: smallest touch target */
   --tap-primary: 7rem;      /* 112px: the record button on a station */
   --measure-phone: 30rem;   /* station screens never get wider than this */
-  --measure-laptop: 64rem;  /* organiser and results pages */
+  --measure-laptop: 64rem;  /* organiser page */
+  --measure-results: 42rem; /* results page: tables 624px wide, so the emailed screenshot crops cleanly */
+  --col-time: 6.5rem;       /* a time column in the results tables */
+  --crest-phone: 2rem;      /* the club crest beside a phone page's title */
+  --crest-laptop: 3.5rem;   /* the club crest beside a laptop page's title */
 
   /* Icons: Lucide, 2px stroke, at two sizes */
   --icon-16: 16px;
@@ -59,57 +62,57 @@
   --press-scale: 0.97;
 }
 
-/* Light: printed-results paper with club-blue ink. */
+/* Light: online race results, plain white, with the crest's blue. */
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #F6F4EF;            /* page */
-  --surface: #FFFEFB;       /* inputs, buttons, a hovered row */
-  --ink: #1B1D20;           /* main text, 15.4:1 on bg */
-  --ink-muted: #5A5D63;     /* secondary text and placeholders, 6.0:1 */
-  --ink-faint: #8B8D91;     /* disabled text and ghost digits only */
-  --rule: #DCD8CE;          /* hairlines between rows */
-  --rule-strong: #8E897E;   /* input and button borders, 3.2:1 */
-  --accent: #1452A3;        /* Riverside blue: primary action, selection, focus. 6.9:1 */
-  --accent-pressed: #0F4285;
-  --on-accent: #FFFFFF;     /* 7.6:1 on accent */
-  --accent-tint: #E2E9F4;   /* selected row */
-  --danger: #A3261A;        /* errors only, 6.7:1 */
-  --danger-tint: #F7E3DF;
+  --bg: #FFFFFF;            /* page */
+  --surface: #F5F6F8;       /* inputs, buttons, a hovered row */
+  --ink: #15171B;           /* main text, 18:1 on bg */
+  --ink-muted: #5A5F69;     /* secondary text and placeholders, 6.4:1 */
+  --ink-faint: #8C919A;     /* disabled text and ghost digits only */
+  --rule: #E3E5E9;          /* hairlines between rows */
+  --rule-strong: #8A909A;   /* input and button borders, 3.2:1 */
+  --accent: #284DA6;        /* the crest's blue: primary action, selection, focus. 7.8:1 */
+  --accent-pressed: #1F3D86;
+  --on-accent: #FFFFFF;     /* 7.8:1 on accent */
+  --accent-tint: #E8EDF7;   /* selected row */
+  --danger: #B42318;        /* errors only, 6.6:1 */
+  --danger-tint: #FCE9E7;
 }
 
-/* Dark: same paper, lights off. */
+/* Dark: neutral, lights off. The crest switches to its white version (in the page markup). */
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #151412;
-  --surface: #1F1D1A;
-  --ink: #EEEAE2;           /* 15.3:1 on bg */
-  --ink-muted: #A8A399;     /* 7.3:1 */
-  --ink-faint: #6E6A62;
-  --rule: #2E2C28;
-  --rule-strong: #77726A;   /* 3.9:1 */
-  --accent: #8AB0EC;        /* 8.3:1 */
-  --accent-pressed: #A6C3F1;
-  --on-accent: #0D1B30;
-  --accent-tint: #1E2A3D;
-  --danger: #F2907F;
+  --bg: #111318;
+  --surface: #1A1D23;
+  --ink: #ECEEF2;           /* 16:1 on bg */
+  --ink-muted: #A2A7B1;     /* 7.7:1 */
+  --ink-faint: #6B707A;
+  --rule: #272B32;
+  --rule-strong: #6E747F;   /* 3.9:1 */
+  --accent: #8FAEEB;        /* 8.3:1 */
+  --accent-pressed: #AAC2F1;
+  --on-accent: #0B1630;
+  --accent-tint: #1B2640;
+  --danger: #F2907F;        /* 8.0:1 */
   --danger-tint: #3A1F1A;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #151412;
-    --surface: #1F1D1A;
-    --ink: #EEEAE2;
-    --ink-muted: #A8A399;
-    --ink-faint: #6E6A62;
-    --rule: #2E2C28;
-    --rule-strong: #77726A;
-    --accent: #8AB0EC;
-    --accent-pressed: #A6C3F1;
-    --on-accent: #0D1B30;
-    --accent-tint: #1E2A3D;
+    --bg: #111318;
+    --surface: #1A1D23;
+    --ink: #ECEEF2;
+    --ink-muted: #A2A7B1;
+    --ink-faint: #6B707A;
+    --rule: #272B32;
+    --rule-strong: #6E747F;
+    --accent: #8FAEEB;
+    --accent-pressed: #AAC2F1;
+    --on-accent: #0B1630;
+    --accent-tint: #1B2640;
     --danger: #F2907F;
     --danger-tint: #3A1F1A;
   }
