@@ -146,6 +146,47 @@ var Model = (function () {
 
   // ---- Roster ----
 
+  const isYes = (v) => /^(y|yes|true|x|1|✓)$/i.test(text(v).trim());
+
+  // Rows from the Competitors tab, as display text ({ row, name, number, flight, nontrad, id }),
+  // -> the competitors the timer can use, plus plain-sentence issues for the rows it can't.
+  function normaliseRoster(rows) {
+    const competitors = [];
+    const issues = [];
+    const rowsByNumber = {};
+    (rows || []).forEach((r) => {
+      const name = text(r.name).trim();
+      const numberText = text(r.number).trim();
+      const flightText = text(r.flight).trim();
+      if (!name && !numberText && !flightText) return;
+      if (!name) {
+        issues.push(issue("roster", "Row " + r.row + " of Competitors has no name, so it's left out."));
+        return;
+      }
+      let number = null;
+      if (numberText) {
+        if (/^\d+$/.test(numberText)) number = Number(numberText);
+        else issues.push(issue("roster", "Row " + r.row + ' of Competitors has "' + numberText + '" as its number. Use a whole number, or leave it blank.'));
+      }
+      const flight = parseFlight(flightText);
+      if (!flight) {
+        issues.push(issue("roster", "Row " + r.row + " of Competitors has " +
+          (flightText ? '"' + flightText + "\" as its flight, which isn't a time like 8:10." : "no flight.")));
+      }
+      if (number !== null) (rowsByNumber[number] = rowsByNumber[number] || []).push(r.row);
+      competitors.push({
+        id: text(r.id).trim(), row: r.row, name: name, number: number,
+        flight: flight ? flight.label : "", flightMinutes: flight ? flight.minutes : null, nontrad: isYes(r.nontrad),
+      });
+    });
+    Object.keys(rowsByNumber).forEach((n) => {
+      if (rowsByNumber[n].length > 1) {
+        issues.push(issue("roster", "Number " + n + " is used more than once in Competitors (rows " + rowsByNumber[n].join(" and ") + ")."));
+      }
+    });
+    return { competitors: competitors, issues: issues };
+  }
+
   // ---- Events ----
 
   // ---- The race ----
@@ -156,6 +197,7 @@ var Model = (function () {
     ERG_ERRORS, STATION_NAMES,
     formatTenths, formatClock, parseFlight, atMinutes, parseTimeOfDay, durationText, startNote, dueNote,
     ergEntry, tenthsToDigits, ergOutsideMessage,
+    normaliseRoster,
   };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = Model;
