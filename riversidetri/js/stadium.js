@@ -11,7 +11,9 @@
   let deleting = null;   // an unnamed time waiting for "Delete" to be confirmed
   let fixing = null;     // { tapId, confirm } for a named time opened in the log
   let moving = null;     // { person, fromTap, fromTime, toTap, toTime }
-  let lastPress = 0;
+  let lastPress = -Infinity; // performance.now() of the last accepted press: a steady clock, unlike store.correctedNow()
+  let pointerDown = false;   // a finger is down inside main: lists must not be replaced under it
+  let renderPending = false;
 
   const store = UI.boot(render);
   if (!store) return;
@@ -23,14 +25,24 @@
   setInterval(tick, 250);
 
   $("record").addEventListener("click", () => {
+    const steady = performance.now();
+    if (steady - lastPress < BOUNCE_MS) { UI.announce("That was a double press, so only one time was recorded."); return; }
+    lastPress = steady;
     const t = store.correctedNow();
-    if (t - lastPress < BOUNCE_MS) return;
-    lastPress = t;
     store.add({ type: "tap", station: station, time: t });
     UI.announce("Recorded " + Model.formatClock(t, true) + ".");
   });
   $("search").addEventListener("input", (e) => { query = e.target.value; moving = null; render(); });
   document.querySelector("main").addEventListener("click", onClick);
+  document.querySelector("main").addEventListener("pointerdown", () => { pointerDown = true; });
+  const released = () => {
+    if (!pointerDown) return;
+    pointerDown = false;
+    // Wait a beat so the click that follows the release still lands on the button that was pressed.
+    if (renderPending) setTimeout(() => { if (!pointerDown) render(); }, 30);
+  };
+  window.addEventListener("pointerup", released);
+  window.addEventListener("pointercancel", released);
 
   function currentTarget(v) {
     const unnamed = Model.unnamedTaps(v, station);
@@ -43,15 +55,34 @@
     return t ? t.time : null;
   }
 
+  // Keep keyboard focus on the same name or time button across a render, if it is still there.
+  function focusKey() {
+    const a = document.activeElement;
+    if (!a || !a.dataset || !a.closest || !a.closest("main")) return null;
+    if (a.dataset.name !== undefined) return ["name", a.dataset.name];
+    if (a.dataset.target !== undefined) return ["target", a.dataset.target];
+    return null;
+  }
+
   function render() {
+    if (pointerDown) { renderPending = true; return; }
+    renderPending = false;
     UI.renderStatus(store);
     const v = store.view();
     if (!v) { UI.setHtml($("pool"), UI.loading(store)); return; }
-    if (!v.people.length) { UI.setHtml($("pool"), UI.emptyRoster()); return; }
+    const key = focusKey();
+    const unnamed = Model.unnamedTaps(v, station);
+    const named = Model.namedTaps(v, station).filter((t) => t.person);
+    if (deleting && !unnamed.some((t) => t.id === deleting)) deleting = null;
+    if (fixing && !named.some((t) => t.id === fixing.tapId)) fixing = null;
     const tgt = currentTarget(v);
     renderQueue(v, tgt);
     renderPool(v, tgt);
-    renderLog(v);
+    renderLog(v, named);
+    if (key && (!document.activeElement || document.activeElement === document.body || !document.activeElement.isConnected)) {
+      const el = document.querySelector("main [data-" + key[0] + '="' + CSS.escape(key[1]) + '"]');
+      if (el && !el.disabled) el.focus();
+    }
   }
 
   function renderQueue(v, tgt) {
@@ -74,6 +105,7 @@
   }
 
   function renderPool(v, tgt) {
+    if (!v.people.length) { $("pool-count").textContent = ""; UI.setHtml($("pool"), UI.emptyRoster()); return; }
     const c = Model.nameCandidates(v, station);
     const count = c.main.concat(c.extra).reduce((n, g) => n + g.people.length, 0);
     $("pool-count").textContent = count ? String(count) : "";
@@ -81,7 +113,7 @@
       .map((g) => Object.assign({}, g, { people: g.people.filter((p) => UI.matches(p, query)) }))
       .filter((g) => g.people.length);
     const list = (groups, key) => groups.map((g) => '<p class="group-label">' + UI.esc(UI.flightLabel(g)) + '</p><ul class="list">' +
-      g.people.map((p) => UI.personRow(p, key + '="' + UI.esc(p.id) + '"' + (tgt ? "" : " disabled"), "")).join("") + "</ul>").join("");
+      g.people.map((p) => UI.personRow(p, key + '="' + UI.esc(p.id) + '"' + (tgt ? ' data-for="' + UI.esc(tgt) + '"' : " disabled"), "")).join("") + "</ul>").join("");
     const main = filter(c.main);
     const extra = filter(c.extra);
     const recorded = query ? filter(Model.groupByFlight(v, v.people.filter((p) => p[AT] !== null))) : [];
@@ -97,6 +129,7 @@
     if (recorded.length) html += '<p class="subsection">Already recorded here</p>' + list(recorded, "data-recorded");
     if (!main.length && !extra.length && !recorded.length) {
       html += '<p class="empty-line">' + (query ? "No one matches “" + UI.esc(query) + "”."
+        : !v.flights.some((f) => f.start !== null && f.start !== undefined) ? "No flight has started yet. Times you record will wait for names."
         : station === "entrance" ? "No one is on the run." : "No one is in the stadium.") + "</p>";
     }
     UI.setHtml($("pool"), html);
@@ -107,14 +140,12 @@
     return t.person.stadium === null ? "No arrival recorded" : "Stadium " + Model.formatTenths(t.person.stadium);
   }
 
-  function renderLog(v) {
-    const named = Model.namedTaps(v, station);
+  function renderLog(v, named) {
     $("log-count").textContent = named.length ? String(named.length) : "";
     if (!named.length) {
       UI.setHtml($("log"), '<p class="empty-line">' + (station === "entrance" ? "No arrivals yet." : "No finishes yet.") + "</p>");
       return;
     }
-    if (fixing && !named.some((t) => t.id === fixing.tapId)) fixing = null;
     const shown = showAll ? named : named.slice(0, 3);
     let html = '<ul class="list">' + shown.map((t) => {
       const head = '<span class="bib">' + UI.esc(UI.num(t.person)) + '</span><span class="main"><span class="name">' + UI.esc(t.person.name) +
@@ -134,6 +165,18 @@
 
   function clearSearch() { query = ""; $("search").value = ""; }
 
+  // After an action: the time that is now up for a name, or the Record button when nothing waits.
+  function focusNext() {
+    const el = document.querySelector("#queue .stamp[aria-pressed=true]") || $("record");
+    el.focus();
+  }
+
+  function openMove(v, p, tgt) {
+    moving = { person: p, fromTap: p[AT + "TapId"], fromTime: p[AT], toTap: tgt, toTime: tapTime(v, tgt) };
+    render();
+    UI.focus("[data-move-yes]");
+  }
+
   function onClick(e) {
     const b = e.target.closest("button");
     if (!b || b.disabled) return;
@@ -142,31 +185,45 @@
     if (!v) return;
     const tgt = currentTarget(v);
     if (d.target) { target = d.target; deleting = null; render(); }
-    else if (d.delete) { deleting = d.delete; render(); UI.focus("[data-delete-yes]"); }
-    else if ("deleteYes" in d) { store.add({ type: "void", target: deleting }); deleting = null; UI.announce("Deleted."); render(); }
+    else if (d.delete) { deleting = d.delete; render(); UI.focus("[data-delete-no]"); }
+    else if ("deleteYes" in d) { store.add({ type: "void", target: deleting }); deleting = null; UI.announce("Deleted."); render(); focusNext(); }
     else if ("deleteNo" in d) { deleting = null; render(); }
     else if (d.name && tgt) {
       const p = v.byId[d.name];
       if (!p) return;
+      if (d.for !== tgt) { UI.announce("The time to name has changed. Check the top of the list."); return; }
+      const c = Model.nameCandidates(v, station);
+      const candidate = c.main.concat(c.extra).some((g) => g.people.some((x) => x.id === p.id));
+      if (!candidate) {
+        if (p[AT] !== null && p[AT] !== undefined && p[AT + "TapId"]) openMove(v, p, tgt);
+        else UI.announce(p.name + " can't be named here right now.");
+        return;
+      }
       store.add({ type: "name", target: tgt, competitor: p.id });
       UI.announce(p.name + ", " + Model.formatClock(tapTime(v, tgt), true) + ".");
       target = null;
       clearSearch();
       render();
+      focusNext();
     } else if (d.recorded && tgt) {
       const p = v.byId[d.recorded];
       if (!p) return;
-      moving = { person: p, fromTap: p[AT + "TapId"], fromTime: p[AT], toTap: tgt, toTime: tapTime(v, tgt) };
-      render();
-      UI.focus("[data-move-yes]");
+      openMove(v, p, tgt);
     } else if ("moveYes" in d && moving) {
-      store.add({ type: "name", target: moving.fromTap, competitor: "" });
-      store.add({ type: "name", target: moving.toTap, competitor: moving.person.id });
-      UI.announce("Moved " + moving.person.name + " to " + Model.formatClock(moving.toTime, true) + ".");
+      const m = moving;
       moving = null;
-      target = null;
+      if (!Model.unnamedTaps(v, station).some((t) => t.id === m.toTap)) {
+        UI.announce("That time already has a name. Pick the time again.");
+        render();
+        return;
+      }
+      store.add({ type: "name", target: m.fromTap, competitor: "" });
+      store.add({ type: "name", target: m.toTap, competitor: m.person.id });
+      UI.announce("Moved " + m.person.name + " to " + Model.formatClock(m.toTime, true) + ". " + Model.formatClock(m.fromTime, true) + " needs a name now.");
+      target = m.fromTap;
       clearSearch();
       render();
+      focusNext();
     } else if ("moveNo" in d) { moving = null; render(); }
     else if (d.fix) { fixing = { tapId: d.fix, confirm: false }; render(); }
     else if ("unname" in d && fixing) {
@@ -175,8 +232,9 @@
       fixing = null;
       UI.announce("That time is back in Needs a name. Tap who it was.");
       render();
-    } else if ("voidAsk" in d && fixing) { fixing.confirm = true; render(); UI.focus("[data-void-yes]"); }
-    else if ("voidYes" in d && fixing) { store.add({ type: "void", target: fixing.tapId }); fixing = null; UI.announce("Deleted."); render(); }
+      focusNext();
+    } else if ("voidAsk" in d && fixing) { fixing.confirm = true; render(); UI.focus("#log [data-fix-close]"); }
+    else if ("voidYes" in d && fixing) { store.add({ type: "void", target: fixing.tapId }); fixing = null; UI.announce("Deleted."); render(); focusNext(); }
     else if ("fixClose" in d) { fixing = null; render(); }
     else if ("more" in d) { showAll = !showAll; render(); }
   }

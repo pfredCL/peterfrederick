@@ -27,6 +27,43 @@ test("record, then tap who it was: the oldest time is named first", async ({ sig
   await expect(signedIn.locator("#log")).toContainText("Blair Nolan");
 });
 
+test("a press 100 ms after another is ignored and says so", async ({ signedIn }) => {
+  await signedIn.goto("/entrance.html");
+  const record = signedIn.getByRole("button", { name: "Record arrival" });
+  await record.click();
+  await signedIn.waitForTimeout(100);
+  await record.click();
+  await expect(signedIn.locator("#live")).toHaveText("That was a double press, so only one time was recorded.");
+  await expect(signedIn.locator("#queue .stamp-item")).toHaveCount(1);
+});
+
+test("before any flight starts, the pool says so", async ({ signedIn, api }) => {
+  api.events.length = 0;
+  await signedIn.goto("/entrance.html");
+  await expect(signedIn.locator("#pool")).toContainText("No flight has started yet. Times you record will wait for names.");
+});
+
+test("after naming the last time, focus goes to the Record button", async ({ signedIn }) => {
+  await signedIn.goto("/entrance.html");
+  await signedIn.getByRole("button", { name: "Record arrival" }).click();
+  await signedIn.getByRole("button", { name: /Sam Carter/ }).click();
+  await expect(signedIn.getByText("No times waiting for a name.")).toBeVisible();
+  await expect(signedIn.locator("#record")).toBeFocused();
+});
+
+test("searching for someone already recorded offers to move their time", async ({ signedIn }) => {
+  await signedIn.goto("/entrance.html");
+  const record = signedIn.getByRole("button", { name: "Record arrival" });
+  await record.click();
+  await signedIn.getByRole("button", { name: /Sam Carter/ }).click();
+  await signedIn.waitForTimeout(350);
+  await record.click();
+  await signedIn.locator("#search").fill("Sam");
+  await signedIn.locator("#pool [data-recorded]").click();
+  await expect(signedIn.locator("#pool .confirm")).toContainText(/Sam Carter already has an arrival at .+\. Move it to .+\?/);
+  await expect(signedIn.getByRole("button", { name: "Move it" })).toBeFocused();
+});
+
 test("a stray press can be deleted, and a named time can go back to needing a name", async ({ signedIn }) => {
   await signedIn.goto("/entrance.html");
   await signedIn.getByRole("button", { name: "Record arrival" }).click();
