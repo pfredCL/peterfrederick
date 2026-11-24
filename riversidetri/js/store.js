@@ -7,10 +7,22 @@ var Store = (function () {
   const FAILING_AFTER_MS = 60000;
   const SAMPLES = 5;
 
+  // The browser's localStorage if it will hand it over (it can throw when blocked), else a copy in memory.
+  function defaultStorage() {
+    try { if (typeof window !== "undefined" && window.localStorage) return window.localStorage; } catch (e) { /* blocked */ }
+    const m = {};
+    return {
+      getItem: (k) => (Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null),
+      setItem: (k, v) => { m[k] = String(v); },
+      removeItem: (k) => { delete m[k]; },
+    };
+  }
+
   function create(opts) {
     const url = opts.url || "";
     const fetchImpl = opts.fetch || ((u, o) => fetch(u, o));
-    const storage = opts.storage || window.localStorage;
+    const timeoutMs = opts.timeoutMs || 15000;
+    const storage = opts.storage || defaultStorage();
     const now = opts.now || (() => Date.now());
     const later = opts.later || ((fn, ms) => setTimeout(fn, ms));
     const uuid = opts.uuid || (() => crypto.randomUUID());
@@ -19,38 +31,65 @@ var Store = (function () {
     function load(key, fallback) {
       try {
         const v = storage.getItem("tw:" + key);
-        return v === null || v === undefined ? fallback : JSON.parse(v);
+        if (v === null || v === undefined) return fallback;
+        const out = JSON.parse(v);
+        return Array.isArray(fallback) && !Array.isArray(out) ? fallback : out;
       } catch (e) {
         return fallback;
       }
     }
+    // Returns whether it worked; when it didn't we carry on in memory.
     function save(key, value) {
-      try { storage.setItem("tw:" + key, JSON.stringify(value)); } catch (e) { /* storage blocked or full: carry on in memory */ }
+      try { storage.setItem("tw:" + key, JSON.stringify(value)); return true; } catch (e) { return false; }
     }
 
     const s = {
       pin: load("pin", ""), station: load("station", ""), device: load("device", "") || uuid(),
       state: load("state", null), queue: load("queue", []), rejected: load("rejected", []), samples: load("samples", []),
-      inflight: null, failingSince: null, pinError: false, retries: 0, retryPending: false,
+      inflight: null, readFailingSince: null, writeFailingSince: null, storageFailing: false,
+      confirmed: {}, stateAt: null, started: false, pinError: false, retries: 0, retryPending: false,
     };
     save("device", s.device);
 
-    const emit = () => listeners.forEach((fn) => fn());
+    const emit = () => listeners.forEach((fn) => { try { fn(); } catch (e) { /* a broken listener mustn't stop the rest */ } });
     const offset = () => Model.bestOffset(s.samples);
     const correctedNow = () => { const o = offset(); return o === null ? now() : now() + o; };
-    const succeeded = () => { s.failingSince = null; s.retries = 0; };
-    const failed = () => { if (s.failingSince === null) s.failingSince = now(); };
+    const succeeded = (kind) => { if (kind === "write") s.writeFailingSince = null; else s.readFailingSince = null; s.retries = 0; };
+    const failed = (kind) => {
+      if (kind === "write") { if (s.writeFailingSince === null) s.writeFailingSince = now(); }
+      else if (s.readFailingSince === null) s.readFailingSince = now();
+    };
+
+    // Save the queue, first adding back anything another tab stored that this one hasn't seen.
+    function saveQueue() {
+      const stored = load("queue", []);
+      const mine = {};
+      s.queue.forEach((e) => { mine[e.id] = true; });
+      stored.forEach((e) => {
+        if (e && e.id && !mine[e.id] && !s.confirmed[e.id]) { mine[e.id] = true; s.queue.push(e); }
+      });
+      s.storageFailing = !save("queue", s.queue);
+    }
+    function saveRejected() { if (!save("rejected", s.rejected)) s.storageFailing = true; }
 
     async function call(body) {
       const t0 = now();
-      const res = await fetchImpl(url, {
-        method: "POST", redirect: "follow",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(Object.assign({ pin: s.pin }, body)),
-      });
-      const t1 = now();
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
+      const ctl = typeof AbortController === "function" ? new AbortController() : null;
+      const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+      let res, t1, data;
+      try {
+        res = await fetchImpl(url, {
+          method: "POST", redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(Object.assign({ pin: s.pin }, body)),
+          signal: ctl ? ctl.signal : undefined,
+        });
+        t1 = now();
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        data = await res.json();
+      } finally {
+        if (timer !== null) clearTimeout(timer);
+      }
       if (typeof data.serverTime === "number") {
         s.samples = s.samples.concat([{ rtt: t1 - t0, offset: data.serverTime - (t0 + t1) / 2 }]).slice(-SAMPLES);
         save("samples", s.samples);
@@ -58,13 +97,20 @@ var Store = (function () {
       if (!data.ok && data.error === "pin") { s.pinError = true; throw new Error("pin"); }
       if (!data.ok) throw new Error(data.message || "server");
       s.pinError = false;
-      if (data.state) { s.state = data.state; save("state", s.state); }
+      // A slow answer to an older request must not undo a newer one.
+      if (data.state && (s.stateAt === null || t0 >= s.stateAt)) {
+        s.state = data.state;
+        s.stateAt = t0;
+        if (!save("state", s.state) && typeof storage.removeItem === "function") {
+          try { storage.removeItem("tw:state"); } catch (e) { /* nothing more to do */ }
+        }
+      }
       return data;
     }
 
     async function refresh() {
       if (!url) return;
-      try { await call({ action: "state" }); succeeded(); } catch (e) { if (e.message !== "pin") failed(); }
+      try { await call({ action: "state" }); succeeded("read"); } catch (e) { if (e.message !== "pin") failed("read"); }
       emit();
     }
 
@@ -84,24 +130,26 @@ var Store = (function () {
 
     async function send() {
       while (s.queue.length) {
-        s.queue = s.queue.map(corrected);
-        save("queue", s.queue);
-        const batch = s.queue.slice();
         try {
+          if (!s.samples.length) await call({ action: "state" });
+          s.queue = s.queue.map(corrected);
+          saveQueue();
+          const batch = s.queue.slice();
           const data = await call({ action: "write", events: batch.map(wire) });
           const reasons = {};
           (data.rejected || []).forEach((r) => { reasons[r.id] = r.reason; });
           const sent = {};
           batch.forEach((e) => {
             sent[e.id] = true;
+            s.confirmed[e.id] = true;
             if (reasons[e.id]) s.rejected.push({ event: wire(e), reason: reasons[e.id] });
           });
           s.queue = s.queue.filter((e) => !sent[e.id]);
-          save("queue", s.queue);
-          save("rejected", s.rejected);
-          succeeded();
+          saveQueue();
+          saveRejected();
+          succeeded("write");
         } catch (e) {
-          if (e.message !== "pin") { failed(); retryLater(); }
+          if (e.message !== "pin") { failed("write"); retryLater(); }
           break;
         } finally {
           emit();
@@ -132,7 +180,7 @@ var Store = (function () {
         competitor: "", value: "", target: "", station: "", device: s.device, corrected: o !== null,
       }, partial);
       s.queue.push(e);
-      save("queue", s.queue);
+      saveQueue();
       emit();
       flush();
       return e;
@@ -149,25 +197,30 @@ var Store = (function () {
     function status() {
       return {
         loaded: !!s.state, pending: s.queue.length, pinError: s.pinError, rejected: s.rejected.slice(),
-        failing: s.failingSince !== null && now() - s.failingSince >= FAILING_AFTER_MS,
+        failing: [s.readFailingSince, s.writeFailingSince].some((t) => t !== null && now() - t >= FAILING_AFTER_MS),
+        storageFailing: s.storageFailing,
       };
     }
 
     async function checkPin(pin) {
+      const previous = s.pin;
       s.pin = String(pin).trim();
       try {
         await call({ action: "state" });
         save("pin", s.pin);
-        succeeded();
+        succeeded("read");
         emit();
         return { ok: true };
       } catch (e) {
+        s.pin = previous;
         return { ok: false, reason: e.message === "pin" ? "pin" : "network" };
       }
     }
 
     // Browser only: refresh every refreshMs while visible, at once on coming back, and when online again.
     function start(refreshMs) {
+      if (s.started) return;
+      s.started = true;
       const tick = () => { if (document.visibilityState === "visible") { refresh(); flush(); } };
       tick();
       setInterval(tick, refreshMs);
@@ -180,7 +233,7 @@ var Store = (function () {
       get station() { return s.station; },
       setStation(st) { s.station = st; save("station", st); },
       forgetPin() { s.pin = ""; save("pin", ""); },
-      dismissRejected(i) { s.rejected.splice(i, 1); save("rejected", s.rejected); emit(); },
+      dismissRejected(i) { s.rejected.splice(i, 1); saveRejected(); emit(); },
       onChange(fn) { listeners.push(fn); },
       checkPin, refresh, flush, add, view, status, correctedNow, start,
     };

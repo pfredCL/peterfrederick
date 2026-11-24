@@ -123,3 +123,174 @@ test("checkPin saves a PIN that works and refuses one that doesn't", async () =>
   assert.deepEqual(await store.checkPin("1234"), { ok: true });
   assert.equal(JSON.parse(storage.getItem("tw:pin")), "1234");
 });
+
+// ---- Hardening ----
+
+test("a request that never answers times out, counts as a network failure and retries", { timeout: 5000 }, async () => {
+  const hang = (u, o) => new Promise((_, reject) => {
+    if (o.signal) o.signal.addEventListener("abort", () => reject(new Error("aborted")));
+  });
+  const later = [];
+  let clock = 10_000;
+  const storage = memoryStorage();
+  storage.setItem("tw:pin", JSON.stringify("1234"));
+  const store = Store.create({
+    url: "https://fake.test/exec", fetch: hang, storage, timeoutMs: 20,
+    now: () => clock, later: (fn, ms) => later.push({ fn, ms }), uuid: () => "t1",
+  });
+  store.add({ type: "tap", station: "entrance", time: 10_000 });
+  await store.flush();
+  assert.equal(store.status().pending, 1);
+  assert.equal(later.length, 1);
+  assert.equal(later[0].ms, 2000);
+  clock += 61_000;
+  assert.equal(store.status().failing, true);
+});
+
+test("storage that refuses writes shows storageFailing but the event still shows", async () => {
+  const srv = fakeServer();
+  const storage = { getItem: (k) => (k === "tw:pin" ? '"1234"' : null), setItem() { throw new Error("quota"); } };
+  let n = 0;
+  const store = Store.create({ url: "u", fetch: srv.fetch, storage, now: () => 10_000, later() {}, uuid: () => "s" + ++n });
+  await store.refresh();
+  assert.equal(store.status().storageFailing, false);
+  store.add({ type: "erg", competitor: "c1", value: 22960 });
+  assert.equal(store.status().storageFailing, true);
+  assert.equal(store.view().byId.c1.erg, 22960);
+});
+
+test("a failing state cache is dropped, and that alone is not storageFailing", async () => {
+  const srv = fakeServer();
+  const m = new Map([["tw:pin", '"1234"']]);
+  const removed = [];
+  const storage = {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem(k, v) { if (k === "tw:state") throw new Error("quota"); m.set(k, String(v)); },
+    removeItem(k) { removed.push(k); m.delete(k); },
+  };
+  const store = Store.create({ url: "u", fetch: srv.fetch, storage, now: () => 10_000, later() {}, uuid: () => "x1" });
+  await store.refresh();
+  assert.deepEqual(removed, ["tw:state"]);
+  assert.equal(store.status().storageFailing, false);
+});
+
+test("with no storage given and no window the store still works", async () => {
+  assert.equal(typeof window, "undefined");
+  const store = Store.create({ url: "", now: () => 1, later() {}, uuid: () => "m1" });
+  store.add({ type: "tap", station: "entrance", time: 1 });
+  assert.equal(store.status().pending, 1);
+});
+
+test("stored values of the wrong shape are ignored", () => {
+  const m = new Map([["tw:queue", '{"a":1}'], ["tw:rejected", "5"], ["tw:samples", '"x"']]);
+  const storage = { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) };
+  const store = Store.create({ url: "", storage, now: () => 1, later() {}, uuid: () => "w1" });
+  assert.equal(store.status().pending, 0);
+  assert.deepEqual(store.status().rejected, []);
+  store.add({ type: "tap", station: "entrance", time: 1 });
+  assert.equal(store.status().pending, 1);
+});
+
+test("the first send from a never-synced phone is clock-corrected", async () => {
+  const { srv, store } = setup();
+  srv.serverTime = 15_000;
+  store.add({ type: "tap", station: "entrance", time: store.correctedNow() });
+  await store.flush();
+  assert.equal(srv.events.length, 1);
+  assert.equal(srv.events[0].time, 15_000);
+  assert.equal(srv.events[0].created, 15_000);
+});
+
+test("two tabs on one storage don't wipe each other's queue", async () => {
+  const srv = fakeServer();
+  const storage = memoryStorage();
+  storage.setItem("tw:pin", JSON.stringify("1234"));
+  const make = (id) => Store.create({ url: "u", fetch: srv.fetch, storage, now: () => 10_000, later() {}, uuid: () => id });
+  srv.down = true;
+  const A = make("a");
+  const B = make("b");
+  A.add({ type: "tap", station: "entrance", time: 10_000 });
+  B.add({ type: "tap", station: "exit", time: 10_000 });
+  const stored = JSON.parse(storage.getItem("tw:queue")).map((e) => e.id).sort();
+  assert.deepEqual(stored, ["a", "b"]);
+  await Promise.all([A.flush(), B.flush()]);
+  srv.down = false;
+  await Promise.all([A.flush(), B.flush()]);
+  assert.deepEqual(srv.events.map((e) => e.id).sort(), ["a", "b"]);
+});
+
+test("write failures stay visible while reads work", async () => {
+  const srv = fakeServer();
+  const storage = memoryStorage();
+  storage.setItem("tw:pin", JSON.stringify("1234"));
+  let clock = 10_000;
+  const fetch = async (u, o) => {
+    if (JSON.parse(o.body).action === "write") {
+      return { ok: true, json: async () => ({ ok: false, error: "server", message: "sheet locked", serverTime: clock }) };
+    }
+    return srv.fetch(u, o);
+  };
+  const store = Store.create({ url: "u", fetch, storage, now: () => clock, later() {}, uuid: () => "k1" });
+  await store.refresh();
+  store.add({ type: "tap", station: "entrance", time: 10_000 });
+  await store.flush();
+  assert.equal(store.status().failing, false);
+  clock += 61_000;
+  await store.refresh();
+  assert.equal(store.status().failing, true);
+});
+
+test("a state response from an older request is ignored", async () => {
+  const srv = fakeServer();
+  const storage = memoryStorage();
+  storage.setItem("tw:pin", JSON.stringify("1234"));
+  let clock = 10_000;
+  const pending = [];
+  const fetch = (u, o) => new Promise((resolve) => pending.push(resolve));
+  const reply = (name) => ({ ok: true, json: async () => ({ ok: true, serverTime: 10_000, state: {
+    competitors: [{ row: 2, id: "c1", name, number: "8", flight: "8:10", nontrad: "" }], events: [] } }) });
+  const store = Store.create({ url: "u", fetch, storage, now: () => clock, later() {}, uuid: () => "z1" });
+  const first = store.refresh();
+  clock += 100;
+  const second = store.refresh();
+  pending[1](reply("New Name"));
+  await second;
+  pending[0](reply("Old Name"));
+  await first;
+  assert.equal(store.view().byId.c1.name, "New Name");
+});
+
+test("checkPin puts the old PIN back when the check fails", async () => {
+  const { store } = setup();
+  assert.equal(store.pin, "1234");
+  await store.checkPin("0000");
+  assert.equal(store.pin, "1234");
+});
+
+test("a throwing listener doesn't stop the write being sent", async () => {
+  const { srv, store } = setup();
+  await store.refresh();
+  store.onChange(() => { throw new Error("listener bug"); });
+  store.add({ type: "tap", station: "entrance", time: 10_000 });
+  await store.flush();
+  assert.equal(srv.events.length, 1);
+});
+
+test("start does nothing the second time", () => {
+  const { store } = setup();
+  const saved = { window: globalThis.window, document: globalThis.document, setInterval: globalThis.setInterval };
+  let listeners = 0, intervals = 0;
+  globalThis.window = { addEventListener: () => { listeners++; } };
+  globalThis.document = { visibilityState: "hidden", addEventListener: () => { listeners++; } };
+  globalThis.setInterval = () => { intervals++; return 0; };
+  try {
+    store.start(1000);
+    store.start(1000);
+    assert.equal(listeners, 2);
+    assert.equal(intervals, 1);
+  } finally {
+    if (saved.window === undefined) delete globalThis.window; else globalThis.window = saved.window;
+    if (saved.document === undefined) delete globalThis.document; else globalThis.document = saved.document;
+    globalThis.setInterval = saved.setInterval;
+  }
+});
