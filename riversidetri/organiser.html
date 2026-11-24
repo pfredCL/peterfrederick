@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Organiser – RBC Tri-Wrathlon timer</title>
+<link rel="preload" href="fonts/overpass-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/app.css">
+<script defer src="js/config.js"></script>
+<script defer src="js/model.js"></script>
+<script defer src="js/store.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/time-entry.js"></script>
+<script defer src="js/organiser.js"></script>
+</head>
+<body>
+<div class="desk">
+  <header class="desk-head">
+    <div><h1 id="race-name">RBC Tri-Wrathlon</h1></div>
+    <div class="meta"><span id="sync" class="sync" role="status"></span><nav class="nav" aria-label="Pages"><a href="organiser.html" aria-current="page">Organiser</a><a href="results.html">Results</a></nav></div>
+  </header>
+  <div id="notices"></div>
+  <main>
+    <div class="block-head"><h2>Flights</h2><p>Start each flight when it actually starts rowing. The time is taken when you press.</p></div>
+    <div class="flights" id="flights"></div>
+    <div class="block-head"><h2>Needs attention</h2></div>
+    <div id="issues"></div>
+    <div class="block-head"><h2>Everyone</h2><p>Click a name to fix a time.</p></div>
+    <div class="table-scroll">
+      <table class="data">
+        <thead><tr><th class="l">#</th><th class="l">Name</th><th class="l">Flight</th><th class="l">Status</th><th>Erg</th><th>Run</th><th>Stadium</th><th>Total</th></tr></thead>
+        <tbody id="everyone"></tbody>
+      </table>
+    </div>
+    <p class="footnote">* denotes non-traditional tri (not eligible for awards)</p>
+  </main>
+  <div id="live" class="visually-hidden" aria-live="polite"></div>
+</div>
+</body>
+</html>
