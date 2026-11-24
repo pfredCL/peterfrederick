@@ -9,6 +9,7 @@ The web app behind peterfrederick.com/riversidetri. It lives in the race Sheet's
 3. Replace everything in `Code.gs` with `Code.gs` from this folder.
 4. Add a script file (＋ → Script) named `model` and replace its contents with `model.js` from this folder.
 5. Project Settings (gear icon) → Script properties → Add script property: name `PIN`, value the race PIN. Save.
+   A longer PIN is harder to guess; anyone with the PIN can read and change times.
 6. Back in the editor, pick `setup` in the function menu and click Run. Approve Google's permission screen.
    The Sheet now has Competitors, Events and Results tabs and a "Tri-Wrathlon" menu.
    If there is an empty "Sheet1" tab, delete it.
@@ -46,4 +47,5 @@ The URL stays the same.
 - If Run says authorisation is required, run `setup` again and approve the permission screen. On "Google hasn't
   verified this app", choose Advanced, then go to the project.
 - If the phones say the PIN didn't work, check the script property `PIN` has no spaces.
+- If the Events tab is ever deleted or rebuilt, run setup again.
 - Only the Sheet's owner can use the Tri-Wrathlon menu, because the Events and Results tabs are protected.

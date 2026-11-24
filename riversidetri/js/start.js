@@ -57,7 +57,7 @@
     open.removeAttribute("aria-disabled");
     label();
     if (!r.ok) {
-      showError(r.reason === "pin" ? "That PIN didn't work. Check it with the race organiser." : "Can't reach the timing sheet. Check your signal and try again.", "pin");
+      showError(r.reason === "pin" ? "That PIN didn't work. Check it with the race organiser." : "Can't reach the sheet. Check your signal and try again.", "pin");
       return;
     }
     if (next) { location.replace(next + ".html"); return; }

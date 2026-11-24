@@ -191,6 +191,9 @@ function writeEvents(events) {
       const ev = tab(TABS.events);
       const first = ev.getLastRow() + 1;
       ensureRows(ev, first + rows.length - 1);
+      // Text columns stay text, so a rebuilt Events tab cannot turn "7:15" into a time.
+      ev.getRange(first, 1, rows.length, 2).setNumberFormat("@");
+      ev.getRange(first, 6, rows.length, 5).setNumberFormat("@");
       ev.getRange(first, 1, rows.length, EVENT_HEADERS.length).setValues(rows);
       invalidate();
       changed = true;

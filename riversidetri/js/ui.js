@@ -67,7 +67,7 @@ var UI = (function () {
 
   function loading(store) {
     return '<p class="empty-line">' + (store.status().failing
-      ? "Can't reach the timing sheet. Check your signal; this page keeps trying."
+      ? "Can't reach the sheet. Check your signal; this page keeps trying."
       : "Loading the start list…") + "</p>";
   }
 
