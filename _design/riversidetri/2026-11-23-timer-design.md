@@ -318,7 +318,7 @@ These replace the "warm neutrals" and "printed-results paper" above. Chosen from
 - **Times stay in Overpass.** Overpass Mono, Barlow Semi Condensed, Big Shoulders Text, B612 Mono and Saira
   Semi Condensed were shown and not chosen.
 - **The results page is narrower:** 42rem including its padding, so the tables are 624px wide and the
-  emailed screenshot has no gap between names and times.
+  emailed screenshot has no gap between names and times. On a phone the tables stay 624px and scroll sideways.
 - **The stadium exit's count is the people in the stadium only**, not those listed under "Not recorded at the
   entrance".
 

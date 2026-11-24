@@ -274,7 +274,8 @@ table.data { width: 100%; border-collapse: collapse; white-space: nowrap; }
 .data .pending { color: var(--ink-muted); }
 .data abbr[title] { text-decoration: none; }
 /* Results tables share fixed column widths so the two tables line up. */
-.data.fixed { table-layout: fixed; }
+/* Never narrower than on a laptop, so a phone scrolls the table sideways instead of squeezing the names to nothing. */
+.data.fixed { table-layout: fixed; min-width: calc(var(--measure-results) - 2 * var(--space-5)); }
 .data.fixed th:first-child { width: var(--space-7); }
 .data.fixed th:nth-child(n+3) { width: var(--col-time); }
 .name-button { padding: 0; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }

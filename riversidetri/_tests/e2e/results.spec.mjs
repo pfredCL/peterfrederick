@@ -46,3 +46,16 @@ test("the results are narrow enough to screenshot for the email, with the crest 
   await expect(crest).toBeVisible();
   expect((await crest.boundingBox()).height).toBe(56);
 });
+
+test("on a phone the results tables scroll sideways rather than squeezing names over times", async ({ signedIn, api }) => {
+  const t0 = Date.now() - 3 * 3600e3;
+  api.events.push(event("start", { value: "7:15", time: t0 }), ...finisher("c0000003", 21267, 4486.2, 5911.8, 1, t0));
+  await signedIn.setViewportSize({ width: 375, height: 812 });
+  await signedIn.goto("/results.html");
+  const name = signedIn.locator("#overall tbody td.l").first();
+  await expect(name).toHaveText("Sam Carter");
+  // The name fits in its own column, as wide as on a laptop, and the table scrolls inside its box, not the page.
+  expect(await name.evaluate((td) => td.scrollWidth <= td.clientWidth)).toBe(true);
+  expect(await signedIn.locator("#overall table").evaluate((t) => t.offsetWidth)).toBe(624);
+  expect(await signedIn.evaluate(() => document.documentElement.scrollWidth)).toBe(375);
+});
