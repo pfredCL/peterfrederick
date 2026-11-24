@@ -189,6 +189,33 @@ var Model = (function () {
 
   // ---- Events ----
 
+  // Later means made later (created), then received later; events not yet sent count as newest.
+  function compareEvents(a, b) {
+    const ra = has(a.received) ? a.received : Infinity;
+    const rb = has(b.received) ? b.received : Infinity;
+    return (a.created - b.created) || (ra === rb ? 0 : ra < rb ? -1 : 1) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  }
+
+  // Apply voids and replacements: the latest start per flight, erg per competitor and name per tap.
+  function resolve(events) {
+    const list = (events || []).slice().sort(compareEvents);
+    const voided = {};
+    list.forEach((e) => { if (e.type === "void" && e.target) voided[e.target] = true; });
+    const out = { starts: {}, startIds: {}, ergs: {}, taps: [], names: {} };
+    list.forEach((e) => {
+      if (voided[e.id] || e.type === "void") return;
+      if (e.type === "start") {
+        const label = text(e.value);
+        out.starts[label] = e;
+        (out.startIds[label] = out.startIds[label] || []).push(e.id);
+      } else if (e.type === "erg") out.ergs[e.competitor] = e;
+      else if (e.type === "tap") out.taps.push(e);
+      else if (e.type === "name") out.names[e.target] = e;
+    });
+    out.taps.sort((a, b) => Number(a.time) - Number(b.time) || compareEvents(a, b));
+    return out;
+  }
+
   // ---- The race ----
 
   // ---- Lists for the screens ----
@@ -197,7 +224,7 @@ var Model = (function () {
     ERG_ERRORS, STATION_NAMES,
     formatTenths, formatClock, parseFlight, atMinutes, parseTimeOfDay, durationText, startNote, dueNote,
     ergEntry, tenthsToDigits, ergOutsideMessage,
-    normaliseRoster,
+    normaliseRoster, resolve,
   };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = Model;
