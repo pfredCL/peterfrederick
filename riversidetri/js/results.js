@@ -2,8 +2,8 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  $("race-name").textContent = CONFIG.race.name;
-  document.title = CONFIG.race.name + " results";
+  $("race-name").textContent = CONFIG.race.name + " " + CONFIG.race.year;
+  document.title = CONFIG.race.name + " " + CONFIG.race.year + " results";
   $("race-meta").textContent = CONFIG.race.date;
   const store = UI.boot(render, { next: "results" });
   if (!store) return;

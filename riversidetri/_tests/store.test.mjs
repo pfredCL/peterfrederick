@@ -318,3 +318,30 @@ test("start does nothing the second time", () => {
     globalThis.setInterval = saved.setInterval;
   }
 });
+
+test("every request carries the year the store was made for", async () => {
+  const srv = fakeServer();
+  const bodies = [];
+  const fetch = async (u, o) => { bodies.push(JSON.parse(o.body)); return srv.fetch(u, o); };
+  const storage = memoryStorage();
+  storage.setItem("tw:pin", JSON.stringify("1234"));
+  const store = Store.create({ url: "u", year: 2026, fetch, storage, now: () => 10_000, later() {}, uuid: () => "y1" });
+  await store.refresh();
+  store.add({ type: "erg", competitor: "c1", value: 22960 });
+  await store.flush();
+  assert.ok(bodies.length >= 2);
+  assert.ok(bodies.every((b) => b.year === 2026 && b.pin === "1234"));
+});
+
+test("a saved state from another year is ignored, one from the same year is used", () => {
+  const state = { competitors: [{ row: 2, id: "c1", name: "Dana Price", number: "8", flight: "8:10", nontrad: "" }], events: [] };
+  const make = (savedYear, year) => {
+    const storage = memoryStorage();
+    storage.setItem("tw:state", JSON.stringify(Object.assign({ year: savedYear }, state)));
+    return Store.create({ url: "u", year, storage, now: () => 1, later() {}, uuid: () => "l1" });
+  };
+  assert.equal(make(2025, 2026).status().loaded, false);
+  assert.equal(make(2026, 2026).status().loaded, true);
+  assert.equal(make(2026, 2026).view().byId.c1.name, "Dana Price");
+  assert.equal(make(2025, undefined).status().loaded, true); // a store made without a year takes what it finds
+});

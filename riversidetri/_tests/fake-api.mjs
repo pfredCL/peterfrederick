@@ -1,5 +1,6 @@
 // An in-memory stand-in for the Apps Script web app, for the Playwright tests.
-// It checks and stores events the way Code.gs does (checkEvent / writeEvents / doPost).
+// It checks and stores events the way Code.gs does (checkEvent / writeEvents / doPost), including the year check.
+// Rows and events may carry an optional `year`; when present, only the request's year is returned and known.
 export const API = "https://fake-api.test/exec";
 export const PIN = "0000";
 
@@ -40,23 +41,26 @@ export function createFakeApi({ rows }) {
     try { body = JSON.parse(route.request().postData() || ""); } catch { body = null; }
     if (!body || typeof body !== "object") return reply({ ok: false, error: "bad-request", message: "That request couldn't be read." });
     if (String(body.pin || "") !== PIN) return reply({ ok: false, error: "pin", message: "That PIN didn't work. Check it with the race organiser." });
+    const year = body.year === undefined || body.year === null ? "" : String(body.year);
+    if (!/^2\d{3}$/.test(year)) return reply({ ok: false, error: "bad-request", message: "This page is out of date. Reload it." });
     const serverTime = Date.now();
-    const state = () => ({ competitors: api.rows, events: api.events });
+    const mine = (x) => x.year === undefined || String(x.year) === year;
+    const state = () => ({ competitors: api.rows.filter(mine), events: api.events.filter(mine) });
     if (body.action === "state") return reply({ ok: true, serverTime, state: state() });
     if (body.action === "write") {
       if (api.failWrites) return reply({ ok: false, error: "server", serverTime, message: "The sheet couldn't do that just now. It will try again." });
       const known = Object.create(null);
       const flights = Object.create(null);
-      for (const r of api.rows) {
+      for (const r of api.rows.filter(mine)) {
         if (String(r.id).trim()) known[String(r.id).trim()] = true;
         if (String(r.flight).trim()) flights[String(r.flight).trim()] = true;
       }
       const types = Object.create(null);
-      for (const x of api.events) types[x.id] = x.type;
+      for (const x of api.events.filter(mine)) types[x.id] = x.type;
       const received = Date.now();
       const rejected = [];
       for (const e of Array.isArray(body.events) ? body.events : []) {
-        if (e && types[e.id]) continue; // already stored: resending is harmless
+        if (e && (types[e.id] || api.events.some((x) => x.id === e.id))) continue; // already stored: resending is harmless
         const why = check(e, known, flights, types);
         if (why) { rejected.push({ id: e && e.id ? String(e.id) : "", reason: why }); continue; }
         types[e.id] = e.type;

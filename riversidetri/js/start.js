@@ -8,7 +8,7 @@
   const params = new URLSearchParams(location.search);
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const next = has(DESK, params.get("next")) ? params.get("next") : "";
-  const store = Store.create({ url: CONFIG.apiUrl });
+  const store = Store.create({ url: CONFIG.apiUrl, year: CONFIG.race.year });
 
   if (!params.has("change") && !params.has("pin") && !next && store.pin && has(PAGES, store.station)) {
     location.replace(PAGES[store.station]);

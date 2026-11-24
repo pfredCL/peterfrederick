@@ -117,7 +117,7 @@ var UI = (function () {
       if (main) main.innerHTML = "<p class=\"empty-line\">The timer isn't connected to its sheet yet.</p>";
       return null;
     }
-    const store = Store.create({ url: CONFIG.apiUrl });
+    const store = Store.create({ url: CONFIG.apiUrl, year: CONFIG.race.year });
     const toStart = (extra) => {
       const q = [opts.next ? "next=" + opts.next : "", extra || ""].filter(Boolean).join("&");
       location.replace("index.html" + (q ? "?" + q : ""));

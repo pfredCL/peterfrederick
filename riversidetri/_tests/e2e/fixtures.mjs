@@ -9,7 +9,7 @@ export const ROWS = [
   { id: "c0000004", name: "Blair Nolan", number: "5", flight: "7:15", nontrad: "Yes" },
 ];
 
-const CONFIG_JS = `var CONFIG = { apiUrl: "${API}", refreshMs: 1000, race: { name: "RBC Tri-Wrathlon 2026", date: "Saturday 5 December" } };`;
+const CONFIG_JS = `var CONFIG = { apiUrl: "${API}", refreshMs: 1000, race: { name: "RBC Tri-Wrathlon", year: 2026, date: "Saturday 5 December" } };`;
 
 export const test = base.extend({
   api: async ({}, use) => { await use(createFakeApi({ rows: ROWS })); },

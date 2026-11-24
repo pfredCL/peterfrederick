@@ -19,7 +19,7 @@
   let renderPending = false;
   let flushTimer = null;
 
-  $("race-name").textContent = CONFIG.race.name;
+  $("race-name").textContent = CONFIG.race.name + " " + CONFIG.race.year;
   const store = UI.boot(render, { next: "organiser" });
   if (!store) return;
   render();

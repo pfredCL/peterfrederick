@@ -16,9 +16,10 @@ test("the fake web app answers like the real one", async ({ app }) => {
   }, { url: API, body });
 
   expect((await post({ pin: "9999", action: "state" })).error).toBe("pin");
-  const state = await post({ pin: PIN, action: "state" });
+  expect(await post({ pin: PIN, action: "state" })).toMatchObject({ ok: false, error: "bad-request", message: "This page is out of date. Reload it." });
+  const state = await post({ pin: PIN, year: 2026, action: "state" });
   expect(state.ok).toBe(true);
   expect(state.state.competitors).toHaveLength(4);
-  const sent = await post({ pin: PIN, action: "write", events: [{ id: "x1", type: "name", created: 1, target: "nope", competitor: "" }] });
+  const sent = await post({ pin: PIN, year: 2026, action: "write", events: [{ id: "x1", type: "name", created: 1, target: "nope", competitor: "" }] });
   expect(sent.rejected).toEqual([{ id: "x1", reason: "The time it names isn't in the sheet." }]);
 });

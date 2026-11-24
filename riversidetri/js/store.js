@@ -21,6 +21,7 @@ var Store = (function () {
 
   function create(opts) {
     const url = opts.url || "";
+    const year = opts.year;
     const fetchImpl = opts.fetch || ((u, o) => fetch(u, o));
     const timeoutMs = opts.timeoutMs || 15000;
     const storage = opts.storage || defaultStorage();
@@ -45,9 +46,15 @@ var Store = (function () {
       try { storage.setItem("tw:" + key, JSON.stringify(value)); return true; } catch (e) { return false; }
     }
 
+    // The saved copy remembers its year, so a phone never shows last year's people.
+    function loadState() {
+      const saved = load("state", null);
+      return saved && year !== undefined && saved.year !== year ? null : saved;
+    }
+
     const s = {
       pin: load("pin", ""), station: load("station", ""), device: load("device", "") || uuid(),
-      state: load("state", null), queue: load("queue", []), rejected: load("rejected", []), samples: load("samples", []),
+      state: loadState(), queue: load("queue", []), rejected: load("rejected", []), samples: load("samples", []),
       inflight: null, readFailingSince: null, writeFailingSince: null, queueSaveFailed: false, rejectedSaveFailed: false,
       confirmed: {}, stateAt: null, started: false, pinError: false, retries: 0, retryPending: false,
     };
@@ -83,7 +90,7 @@ var Store = (function () {
         res = await fetchImpl(url, {
           method: "POST", redirect: "follow",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(Object.assign({ pin: s.pin }, body)),
+          body: JSON.stringify(Object.assign({ pin: s.pin, year: year }, body)),
           signal: ctl ? ctl.signal : undefined,
         });
         t1 = now();
@@ -103,7 +110,7 @@ var Store = (function () {
       if (data.state && (s.stateAt === null || t0 >= s.stateAt)) {
         s.state = data.state;
         s.stateAt = t0;
-        if (!save("state", s.state) && typeof storage.removeItem === "function") {
+        if (!save("state", year === undefined ? s.state : Object.assign({ year: year }, s.state)) && typeof storage.removeItem === "function") {
           try { storage.removeItem("tw:state"); } catch (e) { /* nothing more to do */ }
         }
       }
