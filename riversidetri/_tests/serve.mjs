@@ -8,7 +8,14 @@ const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".woff2": "font/woff2" };
 
 http.createServer(async (req, res) => {
-  let path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+  let path;
+  try {
+    path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+  } catch {
+    res.writeHead(400);
+    res.end("Bad request");
+    return;
+  }
   if (path.endsWith("/")) path += "index.html";
   const file = normalize(join(ROOT, path));
   if (!file.startsWith(ROOT)) { res.writeHead(403); res.end(); return; }
