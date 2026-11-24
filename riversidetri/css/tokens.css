@@ -70,6 +70,7 @@
 /* Light: printed-results paper with club-blue ink. */
 :root,
 [data-theme="light"] {
+  color-scheme: light;
   --bg: #F6F4EF;            /* page */
   --surface: #FFFEFB;       /* dialogs, sheets, inputs */
   --ink: #1B1D20;           /* main text, 15.4:1 on bg */
@@ -88,6 +89,7 @@
 
 /* Dark: same paper, lights off. */
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg: #151412;
   --surface: #1F1D1A;
   --ink: #EEEAE2;           /* 15.3:1 on bg */
@@ -106,6 +108,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #151412;
     --surface: #1F1D1A;
     --ink: #EEEAE2;

@@ -35,19 +35,20 @@ var UI = (function () {
 
   const num = (p) => (p.number === null || p.number === undefined ? "" : String(p.number));
 
-  // A tappable person row. attrs: extra button attributes. right: HTML for the right-hand column.
+  // A tappable person row. attrs: extra button attributes. right: HTML for the right-hand column. attrs and right must already be escaped by the caller.
   function personRow(p, attrs, right) {
-    return '<li><button type="button" class="row" ' + attrs + '><span class="bib">' + num(p) + '</span><span class="main"><span class="name">' +
+    return '<li><button type="button" class="row" ' + attrs + '><span class="bib">' + esc(num(p)) + '</span><span class="main"><span class="name">' +
       esc(p.name) + '</span></span><span class="aside-col">' + (right || "") + "</span></button></li>";
   }
 
-  // An inline question with two answers. yes/no: { attr, text, danger }.
+  // An inline question with two answers. yes/no: { attr, text, danger }. yes.attr and no.attr must already be escaped by the caller.
   function confirm(message, yes, no) {
     return '<div class="confirm" role="alert"><p>' + esc(message) + '</p><div class="confirm-actions">' +
       '<button type="button" class="button ' + (yes.danger ? "danger" : "primary") + '" ' + yes.attr + "><span>" + esc(yes.text) + "</span></button>" +
       '<button type="button" class="button" ' + no.attr + "><span>" + esc(no.text) + "</span></button></div></div>";
   }
 
+  // id must already be escaped by the caller.
   function errorLine(message, id) {
     return '<p class="row-error"' + (id ? ' id="' + id + '"' : "") + ">" + icon("alert", "icon-16") + "<span>" + esc(message) + "</span></p>";
   }
@@ -94,7 +95,7 @@ var UI = (function () {
           "<span>This phone can't keep times if the page closes, because its storage is full or blocked. Keep this page open until it says All saved.</span></p>";
       }
       st.rejected.forEach((r, i) => {
-        html += '<p class="notice">' + icon("alert", "icon-16") + "<span>" + esc(WHAT[r.event.type] || "An entry") + " wasn't saved. " +
+        html += '<p class="notice">' + icon("alert", "icon-16") + "<span>" + esc(Object.prototype.hasOwnProperty.call(WHAT, r.event.type) ? WHAT[r.event.type] : "An entry") + " wasn't saved. " +
           esc(r.reason) + '</span><button type="button" class="link-button" data-dismiss="' + i + '">OK</button></p>';
       });
       setHtml(box, html);
@@ -107,6 +108,7 @@ var UI = (function () {
   }
 
   // Page start-up: check config and PIN, wire notices, re-render on every change, start syncing.
+  // The start page must not call boot(): it redirects there when there is no PIN.
   // opts.next: "organiser" or "results", so the start page knows where to come back to.
   function boot(render, opts) {
     opts = opts || {};

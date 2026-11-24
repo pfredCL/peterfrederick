@@ -30,6 +30,18 @@ test("a person row is one button: number, name, and the right-hand column", () =
     '<li><button type="button" class="row" data-open="c1"><span class="bib">8</span><span class="main"><span class="name">Dana &lt;Price&gt;</span></span><span class="aside-col">38:16.0</span></button></li>');
 });
 
+test("a person row escapes a number given as a string", () => {
+  const html = UI.personRow({ name: "Dana", number: '8"><b>' }, "", "");
+  assert.ok(!html.includes("<b>"));
+  assert.ok(html.includes("8&quot;&gt;&lt;b&gt;"));
+});
+
+test("the time field's input turns off spellcheck and shows the formatted value", () => {
+  const html = TimeEntry.html("x", "Erg time", "381");
+  assert.ok(html.includes('spellcheck="false"'));
+  assert.ok(html.includes('value="38:1"'));
+});
+
 test("the time field fills in the punctuation", () => {
   assert.equal(TimeEntry.format("381"), "38:1");
   assert.equal(TimeEntry.format("38160"), "38:16.0");

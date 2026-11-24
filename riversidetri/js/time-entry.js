@@ -15,9 +15,9 @@ var TimeEntry = (function () {
     return out;
   }
 
-  // label must already be HTML-escaped.
+  // label and id must already be HTML-escaped.
   function html(id, label, digits) {
-    return '<div class="time-entry"><input class="time-input" id="' + id + '" inputmode="numeric" autocomplete="off" enterkeyhint="done" aria-label="' +
+    return '<div class="time-entry"><input class="time-input" id="' + id + '" inputmode="numeric" autocomplete="off" spellcheck="false" autocapitalize="off" enterkeyhint="done" aria-label="' +
       label + '" value="' + format(digitsOf(digits)) + '"><div class="time-display" aria-hidden="true"></div></div>';
   }
 
@@ -39,7 +39,7 @@ var TimeEntry = (function () {
         const el = document.createElement("span");
         if (ch !== "d") el.textContent = ch;
         else if (i < d.length) el.textContent = d[i++];
-        else { el.textContent = "0"; el.className = "ghost"; if (!next) next = el; i++; }
+        else { el.textContent = "0"; el.className = "ghost"; if (!next) next = el; }
         display.append(el);
       }
       const caret = document.createElement("span");
@@ -49,7 +49,7 @@ var TimeEntry = (function () {
 
     input.addEventListener("input", () => { paint(); toEnd(); if (opts.onInput) opts.onInput(digitsOf(input.value)); });
     input.addEventListener("keydown", (e) => {
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].indexOf(e.key) >= 0) e.preventDefault();
+      if (["ArrowUp", "ArrowDown"].indexOf(e.key) >= 0) e.preventDefault();
       if (e.key === "Enter" && opts.onEnter) { e.preventDefault(); opts.onEnter(); }
       if (e.key === "Escape" && opts.onEscape) { e.preventDefault(); opts.onEscape(); }
     });

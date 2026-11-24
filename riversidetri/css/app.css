@@ -47,7 +47,7 @@ button, input { font: inherit; color: inherit; }
 }
 .notice .icon-16 { color: var(--danger); margin-top: calc((var(--leading-14) - var(--icon-16)) / 2); }
 .notice span { flex: 1; }
-.notice .link-button { min-height: 0; }
+.notice .link-button { min-height: var(--tap-min); }
 .content { flex: 1; padding: 0 var(--space-4) var(--space-6); }
 .page-title { margin-top: var(--space-5); font-size: var(--text-20); line-height: var(--leading-20); font-weight: var(--weight-strong); }
 .status-line { margin-top: var(--space-4); font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
@@ -232,6 +232,10 @@ button.row:disabled .bib { color: var(--ink-faint); }
 .flight .stack { display: grid; gap: var(--space-1); }
 .flight .stack > span:last-child { font-size: var(--text-14); line-height: var(--leading-14); color: var(--ink-muted); }
 .flight .actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-4); }
+@media (max-width: 40rem) {
+  .flight { grid-template-columns: 1fr; gap: var(--space-3); }
+  .flight .actions { justify-content: flex-start; flex-wrap: wrap; }
+}
 .clock-input { width: calc(var(--space-8) * 2); }
 .issues { list-style: none; margin: 0; padding: 0; border-top: var(--rule-width) solid var(--rule-strong); }
 .issues li { display: flex; align-items: baseline; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: var(--rule-width) solid var(--rule); }
