@@ -55,6 +55,26 @@ The URL stays the same.
 
 Past years can be typed straight into Results with their Year. The timer never touches a year that has no events.
 
+## Trying it with made-up people
+
+`Demo.gs` fills this year's race with 24 made-up people part way through, so you can see and try every screen.
+Six have finished (two of them non-traditional), four are in the stadium, ten are on the run and four are still on the erg.
+One stadium entrance time and one exit time are waiting for a name.
+
+1. In the Apps Script editor, add a script file (＋ → Script) named `Demo` and paste in `Demo.gs` from this folder. Save.
+   No new deployment is needed: the web app never runs this file.
+2. Pick `populate` in the function menu and click Run. The phones show the made-up race within a few seconds.
+3. The made-up race started about 1¾ hours before you ran it, so its two flights are named after those times
+   (like 3:45 and 4:40), not 7:15 and 8:10. That way anything you record lines up with the made-up times.
+   The made-up people have numbers 901 to 924 and IDs starting `demo-`. Leave those rows alone.
+4. When you're done, pick `clear` and click Run. It takes out the made-up people, their times and anything you did
+   to them on the phones. Real people and their times stay.
+   A stadium time you recorded without naming anyone, or a start time you changed, also stays. Clear timing data
+   removes those, as it does after the rehearsal.
+
+Running `populate` again replaces the made-up race with a fresh one. Run `clear` before the rehearsal. Clear timing data
+doesn't remove the made-up people from Competitors; `clear` does.
+
 ## If something goes wrong
 
 - If Run says authorisation is required, run `setup` again and approve the permission screen. On "Google hasn't

@@ -8,6 +8,7 @@ import Model from "../js/model.js";
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 const modelSource = read("../_apps-script/model.js");
 const codeSource = read("../_apps-script/Code.gs");
+const demoSource = read("../_apps-script/Demo.gs");
 
 function makeSheet(name, maxRows) {
   const sh = {
@@ -19,6 +20,13 @@ function makeSheet(name, maxRows) {
     },
     getMaxRows() { return sh.maxRows; },
     insertRowsAfter(after, n) { assert.ok(after <= sh.maxRows); sh.maxRows += n; },
+    deleteRows(start, n) {
+      // Like Sheets: at least one row has to stay below the frozen ones.
+      if (sh.maxRows - n <= sh.frozen) throw new Error("Sorry, it is not possible to delete all non-frozen rows.");
+      assert.ok(start > sh.frozen && start + n - 1 <= sh.maxRows);
+      sh.data.splice(start - 1, n);
+      sh.maxRows -= n;
+    },
     clearContents() { sh.data = []; },
     insertColumnBefore(n) { assert.equal(n, 1); sh.data.forEach((r) => { if (r) r.unshift(""); }); },
     setFrozenRows(n) { sh.frozen = n; },
@@ -121,7 +129,7 @@ function makeWorld(preset) {
       createTextOutput: (s) => ({ text: s, setMimeType() { return this; }, getContent() { return this.text; } }),
     },
   });
-  vm.runInContext(modelSource + "\n" + codeSource, ctx);
+  vm.runInContext(modelSource + "\n" + codeSource + "\n" + demoSource, ctx);
   const post = (body) => JSON.parse(ctx.doPost({ postData: { contents: JSON.stringify(body) } }).getContent());
   const authed = (body) => post(Object.assign({ pin: "1234", year: 2026 }, body));
   ctx.setup();
@@ -462,4 +470,116 @@ test("setup upgrades a Sheet made before the Year column, and a second run chang
   w.ctx.setup();
   assert.equal(w.snapshot(), before);
   assert.equal(w.authed({ action: "state" }).state.competitors[0].name, "Ann Rower"); // a blank Year becomes this year's
+});
+
+// ---- Demo data (Demo.gs) ----
+
+const YEAR = String(new Date().getFullYear());
+const REAL_PEOPLE = [["2025", "Old Timer", "5", "7:15", "", "c2025"], [YEAR, "Ann Rower", "12", "7:15", "", "creal"]];
+const REAL_EVENTS = [
+  toRow(evRow("2025", "old1", "erg", { competitor: "c2025", value: "20000" })),
+  toRow(evRow(YEAR, "real1", "erg", { competitor: "creal", value: "22800" })),
+];
+
+function realWorld() {
+  const w = makeWorld();
+  w.fill("Competitors", REAL_PEOPLE.map((r) => r.slice()));
+  w.fill("Events", REAL_EVENTS.map((r) => r.slice()));
+  return w;
+}
+
+const demoView = (w) => {
+  const s = w.authed({ action: "state", year: YEAR }).state;
+  return Model.buildView(s.competitors.filter((c) => c.id.startsWith("demo-")), s.events, Date.now());
+};
+
+test("populate adds made-up people at every stage of the race, with nothing for the organiser to fix", () => {
+  const w = makeWorld();
+  w.ctx.populate();
+  const s = w.authed({ action: "state", year: YEAR }).state;
+  const view = Model.buildView(s.competitors, s.events, Date.now());
+  const count = (status) => view.people.filter((p) => p.status === status).length;
+  assert.equal(view.people.length, 24);
+  for (const status of ["Finished", "In the stadium", "On the run", "On the erg"]) assert.ok(count(status) >= 3, status);
+  assert.equal(count("Not started"), 0);
+  // Two flights 55 minutes apart, each started right on its time
+  assert.equal(view.flights.length, 2);
+  view.flights.forEach((f) => assert.equal(Model.startNote(f), "Right on " + f.label));
+  assert.equal(Math.abs(view.flights[1].start - view.flights[0].start), 55 * 60000);
+  // Non-traditional finishers are ranked on their own
+  const ranks = Model.rank(view.people);
+  assert.ok(ranks.overall.length >= 3);
+  assert.ok(ranks.nontrad.length >= 1);
+  // One time waiting for a name at each stadium station, and no warnings
+  assert.equal(Model.unnamedTaps(view, "entrance").length, 1);
+  assert.equal(Model.unnamedTaps(view, "exit").length, 1);
+  assert.deepEqual(view.issues, []);
+  assert.ok(s.events.every((e) => e.created <= Date.now() && (e.time === null || e.time <= Date.now())));
+  // Every ID says it's demo data, and the numbers stay clear of real ones
+  assert.ok(s.competitors.every((c) => c.id.startsWith("demo-") && Number(c.number) > 900));
+  assert.ok(s.events.every((e) => e.id.startsWith("demo-")));
+  // Results lists the finishers
+  const placed = w.sheets.Results.data.slice(1).filter((r) => r[0] === YEAR && r[1] !== "");
+  assert.equal(placed.length, ranks.overall.length + ranks.nontrad.length);
+});
+
+test("populate keeps what's already in the Sheet, and running it again starts afresh", () => {
+  const w = realWorld();
+  w.ctx.populate();
+  const firstIds = w.eventRows().map((r) => r[1]);
+  w.ctx.populate();
+  const comp = w.sheets.Competitors.data.slice(1);
+  assert.deepEqual(comp.slice(0, 2), REAL_PEOPLE);
+  assert.equal(comp.filter((r) => String(r[5]).startsWith("demo-")).length, 24);
+  assert.deepEqual(w.eventRows().slice(0, 2), REAL_EVENTS);
+  assert.deepEqual(w.eventRows().map((r) => r[1]).sort(), firstIds.sort()); // the same events, not twice
+  assert.ok(w.eventRows().filter((r) => r[1].startsWith("demo-")).every((r) => r[0] === YEAR));
+});
+
+test("clear takes out the made-up people, their times and anything done to them, and nothing else", () => {
+  const w = realWorld();
+  w.sheets.Results.data.push(HAND_2025.slice());
+  w.ctx.populate();
+  const view = demoView(w);
+  const onErg = view.people.find((p) => p.status === "On the erg").id;
+  const running = view.people.find((p) => p.status === "On the run").id;
+  const inStadium = view.people.find((p) => p.status === "In the stadium").id;
+  const waiting = Model.unnamedTaps(view, "exit")[0].id;
+  const now = Date.now();
+  // Trying the demo on the phones
+  const r = w.authed({ action: "write", year: YEAR, events: [
+    ev({ id: "p1", type: "erg", competitor: onErg, value: "24000", created: now }),
+    ev({ id: "p2", type: "tap", station: "entrance", time: now, created: now }),
+    ev({ id: "p3", type: "name", target: "p2", competitor: running, created: now + 1 }),
+    ev({ id: "p4", type: "void", target: "p1", created: now + 2 }),
+    ev({ id: "p5", type: "name", target: waiting, competitor: inStadium, created: now + 3 }),
+    ev({ id: "p6", type: "erg", competitor: "creal", value: "23000", created: now + 4 }),
+    ev({ id: "p7", type: "tap", station: "exit", time: now, created: now + 5 }),
+  ] });
+  assert.deepEqual(r.rejected, []);
+  w.ctx.clear();
+  assert.deepEqual(w.sheets.Competitors.data.slice(1), REAL_PEOPLE);
+  // A real person's erg time and a time nobody named stay; everything about the made-up people goes
+  assert.deepEqual(w.eventRows().map((x) => x[1]), ["old1", "real1", "p6", "p7"]);
+  assert.deepEqual(w.authed({ action: "state", year: YEAR }).state.competitors.map((c) => c.id), ["creal"]);
+  const results = w.sheets.Results.data.slice(1);
+  assert.deepEqual(results.map((x) => [x[0], x[2]]), [[YEAR, "Ann Rower"], ["2025", "Old Winner"]]);
+});
+
+test("clear leaves just the headers when the made-up people were the only ones", () => {
+  const w = makeWorld();
+  w.ctx.populate();
+  w.ctx.clear();
+  assert.equal(w.sheets.Competitors.getLastRow(), 1);
+  assert.equal(w.sheets.Events.getLastRow(), 1);
+  assert.equal(w.sheets.Results.getLastRow(), 1);
+  w.ctx.populate(); // and it can be filled again
+  assert.equal(demoView(w).people.length, 24);
+});
+
+test("clear with no demo data changes nothing", () => {
+  const w = realWorld();
+  const before = w.snapshot();
+  w.ctx.clear();
+  assert.equal(w.snapshot(), before);
 });
