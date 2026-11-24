@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Erg – RBC Tri-Wrathlon timer</title>
+<link rel="preload" href="fonts/overpass-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/app.css">
+<script defer src="js/config.js"></script>
+<script defer src="js/model.js"></script>
+<script defer src="js/store.js"></script>
+<script defer src="js/ui.js"></script>
+<script defer src="js/time-entry.js"></script>
+<script defer src="js/erg.js"></script>
+</head>
+<body>
+<div class="phone">
+  <header class="topbar"><h1>Erg</h1><span id="sync" class="sync" role="status"></span></header>
+  <div id="notices"></div>
+  <main class="content">
+    <section class="section" aria-labelledby="waiting-title">
+      <div class="section-head"><h2 id="waiting-title">Waiting for a time</h2><span class="count" id="waiting-count"></span></div>
+      <div class="search">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search" type="search" placeholder="Name or number" aria-label="Find a rower" autocomplete="off">
+      </div>
+      <div id="waiting"></div>
+    </section>
+    <section class="section" aria-labelledby="entered-title">
+      <div class="section-head"><h2 id="entered-title">Entered</h2><span class="count" id="entered-count"></span></div>
+      <div id="entered"></div>
+    </section>
+    <p class="status-line" id="erg-status"></p>
+    <p class="footer-links"><a href="index.html?change=1">Change station</a></p>
+  </main>
+  <div id="live" class="visually-hidden" aria-live="polite"></div>
+</div>
+</body>
+</html>

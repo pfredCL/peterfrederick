@@ -1,0 +1,134 @@
+/* Riverside Tri-Wrathlon timer: design tokens.
+   Draft for approval. Components use these and nothing else: no literal colours or sizes.
+   Light is the default; dark follows the phone's setting, or [data-theme] forces one. */
+
+:root {
+  /* Type family: one. Overpass is an open version of Highway Gothic, the road-sign lettering
+     along the run, drawn to be read at a glance outdoors. Times and numbers use the same
+     family with font-variant-numeric: tabular-nums, so columns line up. */
+  --font-ui: "Overpass", system-ui, sans-serif;
+  /* Overpass sits a few pixels high in its line box. Text inside a box (inputs, buttons,
+     tinted rows) uses text-box: trim-both cap alphabetic so it centres optically. */
+  /* Native inputs can't be trimmed, so their text is nudged down by this much top padding
+     instead (it moves the text down by half of it, about 2px at 16px). */
+  --input-nudge: 0.25em;
+  --weight-regular: 400;
+  --weight-strong: 600; /* the heaviest weight in the app */
+
+  /* Type scale: size / line height. 16 is the phone body size (it also stops iOS zooming
+     into inputs). 12 is the floor. */
+  --text-12: 0.75rem;   --leading-12: 1rem;
+  --text-14: 0.875rem;  --leading-14: 1.25rem;
+  --text-16: 1rem;      --leading-16: 1.5rem;
+  --text-20: 1.25rem;   --leading-20: 1.75rem;
+  --text-24: 1.5rem;    --leading-24: 2rem;
+  --text-32: 2rem;      --leading-32: 2.5rem;
+  --text-48: 3rem;      --leading-48: 3.25rem;
+
+  /* Spacing: 4px steps. */
+  --space-1: 0.25rem;  /*  4 */
+  --space-2: 0.5rem;   /*  8 */
+  --space-3: 0.75rem;  /* 12 */
+  --space-4: 1rem;     /* 16 */
+  --space-5: 1.5rem;   /* 24 */
+  --space-6: 2rem;     /* 32 */
+  --space-7: 3rem;     /* 48 */
+  --space-8: 4rem;     /* 64 */
+
+  /* Radii: two only. Nothing is pill-shaped. */
+  --radius-s: 4px;   /* inputs, small buttons, chips */
+  --radius-m: 10px;  /* the big record button, dialogs, sheets */
+
+  /* Lines and sizes */
+  --rule-width: 1px;
+  --mark-width: 3px;        /* the accent bar on a selected row */
+  --tap-min: 3rem;          /* 48px: smallest touch target */
+  --tap-primary: 7rem;      /* 112px: the record button on a station */
+  --measure-phone: 30rem;   /* station screens never get wider than this */
+  --measure-laptop: 64rem;  /* organiser and results pages */
+
+  /* Icons: Lucide, 2px stroke, at three sizes */
+  --icon-16: 16px;
+  --icon-20: 20px;
+  --icon-24: 24px;
+
+  /* Focus */
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* Motion */
+  --dur-press: 100ms;
+  --dur-ui: 160ms;          /* every interface transition stays under ~200ms */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --press-scale: 0.97;
+  --enter-scale: 0.95;      /* overlays start here with a fade, never from 0 */
+
+  /* Elevation: overlays only (dialogs, the name picker sheet). Rows and panels are flat. */
+  --shadow-overlay: 0 8px 28px rgb(0 0 0 / 0.18), 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+/* Light: printed-results paper with club-blue ink. */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #F6F4EF;            /* page */
+  --surface: #FFFEFB;       /* dialogs, sheets, inputs */
+  --ink: #1B1D20;           /* main text, 15.4:1 on bg */
+  --ink-muted: #5A5D63;     /* secondary text and placeholders, 6.0:1 */
+  --ink-faint: #8B8D91;     /* disabled text and ghost digits only */
+  --rule: #DCD8CE;          /* hairlines between rows */
+  --rule-strong: #8E897E;   /* input and button borders, 3.2:1 */
+  --accent: #1452A3;        /* Riverside blue: primary action, selection, focus. 6.9:1 */
+  --accent-pressed: #0F4285;
+  --on-accent: #FFFFFF;     /* 7.6:1 on accent */
+  --accent-tint: #E2E9F4;   /* selected row */
+  --danger: #A3261A;        /* errors only, 6.7:1 */
+  --danger-tint: #F7E3DF;
+  --scrim: rgb(27 29 32 / 0.4);  /* behind sheets and dialogs */
+}
+
+/* Dark: same paper, lights off. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #151412;
+  --surface: #1F1D1A;
+  --ink: #EEEAE2;           /* 15.3:1 on bg */
+  --ink-muted: #A8A399;     /* 7.3:1 */
+  --ink-faint: #6E6A62;
+  --rule: #2E2C28;
+  --rule-strong: #77726A;   /* 3.9:1 */
+  --accent: #8AB0EC;        /* 8.3:1 */
+  --accent-pressed: #A6C3F1;
+  --on-accent: #0D1B30;
+  --accent-tint: #1E2A3D;
+  --danger: #F2907F;
+  --danger-tint: #3A1F1A;
+  --scrim: rgb(0 0 0 / 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #151412;
+    --surface: #1F1D1A;
+    --ink: #EEEAE2;
+    --ink-muted: #A8A399;
+    --ink-faint: #6E6A62;
+    --rule: #2E2C28;
+    --rule-strong: #77726A;
+    --accent: #8AB0EC;
+    --accent-pressed: #A6C3F1;
+    --on-accent: #0D1B30;
+    --accent-tint: #1E2A3D;
+    --danger: #F2907F;
+    --danger-tint: #3A1F1A;
+  --scrim: rgb(0 0 0 / 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --press-scale: 1;
+    --enter-scale: 1;     /* fades stay, movement goes */
+  }
+}

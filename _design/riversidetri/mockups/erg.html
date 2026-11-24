@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Erg · Tri-Wrathlon mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="mockup.css">
+<!-- Mockup only: #dark or #light in the address forces a theme for screenshots. -->
+<script>if (location.hash === "#dark" || location.hash === "#light") document.documentElement.dataset.theme = location.hash.slice(1);</script>
+</head>
+<body>
+<div class="phone">
+  <header class="topbar"><h1>Erg</h1><span class="sync"><svg class="icon-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>All saved</span></span></header>
+  <main class="content">
+    <section class="section"><div class="section-head"><h2>Waiting for a time</h2><span class="count">8 from the 8:10 flight</span></div><div class="search"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="search" placeholder="Name or number" aria-label="Find a rower"></div><ul class="list"><li class="row"><span class="bib">31</span><span class="main"><span class="name">Cameron Ward</span></span><span></span></li><li class="row"><span class="bib">6</span><span class="main"><span class="name">Casey Doyle</span></span><span></span></li><li class="row is-open"><span class="bib">22</span><span class="main"><span class="name">Dana Price</span></span><span></span><div class="row-entry"><div class="time-entry is-focus"><div class="time-display" aria-hidden="true"><span>3</span><span>8</span><span>:</span><span>1</span><span>6</span><span>.</span><span class="caret"></span><span class="ghost">0</span></div></div><button class="button primary" type="button"><span>Save</span></button></div><p class="row-hint">Type the digits only. The colon and decimal point fill in for you.</p></li><li class="row"><span class="bib">18</span><span class="main"><span class="name">Hayden Moss</span></span><span></span></li><li class="row"><span class="bib">15</span><span class="main"><span class="name">Jamie Lowe</span></span><span></span></li><li class="row"><span class="bib">8</span><span class="main"><span class="name">Quinn Foster</span></span><span></span></li><li class="row"><span class="bib">21</span><span class="main"><span class="name">Rowan Pike</span></span><span></span></li><li class="row"><span class="bib">1</span><span class="main"><span class="name">Skyler Bell</span></span><span></span></li></ul></section>
+    <section class="section"><div class="section-head"><h2>Entered</h2><span class="count">7 from the 8:10 flight</span></div><ul class="list"><li class="row"><span class="bib">11</span><span class="main"><span class="name">Jordan Hayes</span></span><span class="time muted">36:31.2</span></li><li class="row"><span class="bib">13</span><span class="main"><span class="name">Pat Kelly</span></span><span class="time muted">36:15.4</span></li><li class="row"><span class="bib">25</span><span class="main"><span class="name">Finley Ross</span></span><span class="time muted">34:26.1</span></li></ul><a class="more" href="#">Show all 7</a></section>
+    <p class="status">All 16 times from the 7:15 flight are in.</p>
+  </main>
+</div>
+</body>
+</html>
